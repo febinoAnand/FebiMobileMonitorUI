@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Conversation · SMS Reader</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="m-view" data-view="mobile" data-root="../" data-nav="messages" data-needs-phone>
+  <div class="m-phone">
+    <div class="m-app">
+      <header class="m-topbar" id="m-topbar"></header>
+      <main class="m-content" id="card">
+        <div class="m-subhead">
+          <a class="icon-btn" id="back-btn" href="messages.html" aria-label="Back to messages">&#8592;</a>
+          <a class="contact-trigger" id="contact-link" href="#" aria-label="View contact info">
+            <span class="avatar" id="conv-avatar"></span>
+            <span class="contact-trigger-text">
+              <strong id="conv-name"></strong>
+              <small id="conv-number"></small>
+            </span>
+          </a>
+          <a class="icon-btn" id="info-link" href="#" aria-label="Contact info">&#9432;</a>
+        </div>
+        
+        <section class="message-list" id="message-list">
+          <!-- Filled by js/conversation.js -->
+        </section>
+      </main>
+    </div>
+    <nav class="m-tabbar" id="m-tabbar" aria-label="Main"></nav>
+  </div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/conversation.js"></script>
+</body>
+</html>

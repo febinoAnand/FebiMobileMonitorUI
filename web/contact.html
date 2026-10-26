@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Contact · SMS Reader</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body data-view="web" data-root="../" data-nav="contacts" data-needs-phone>
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="Main"></nav>
+
+    <div class="page page-wide">
+      <main class="card" id="card">
+        <header class="bar-header">
+          <a class="icon-btn" id="back-btn" href="contacts.html" aria-label="Back">&#8592;</a>
+          <h2>Contact info</h2>
+          <button class="icon-btn menu-btn" data-menu aria-label="Open menu">&#9776;</button>
+        </header>
+
+        <div class="scroll">
+          <div class="contact-layout">
+            <section class="contact-hero">
+              <div class="avatar avatar-lg" id="contact-avatar"></div>
+              <h3 id="contact-name"></h3>
+              <span class="pill" id="contact-label"></span>
+
+              <div class="quick-actions">
+                <a class="quick-action" id="action-message" href="#">
+                  <span class="icon-btn">&#128172;</span>Message
+                </a>
+                <a class="quick-action" id="action-call" href="#">
+                  <span class="icon-btn">&#128222;</span>Call
+                </a>
+                <a class="quick-action" id="action-email" href="#">
+                  <span class="icon-btn">&#9993;</span>Email
+                </a>
+              </div>
+            </section>
+
+            <section>
+              <dl class="contact-details">
+                <div><dt>Phone</dt><dd id="contact-phone"></dd></div>
+                <div><dt>Email</dt><dd id="contact-email"></dd></div>
+                <div><dt>Address</dt><dd id="contact-address"></dd></div>
+                <div><dt>Company</dt><dd id="contact-company"></dd></div>
+                <div><dt>Notes</dt><dd id="contact-notes"></dd></div>
+              </dl>
+
+              <div class="contact-stats">
+                <div><strong id="stat-total">0</strong><span>Messages</span></div>
+                <div><strong id="stat-calls">0</strong><span>Calls</span></div>
+                <div><strong id="stat-last">-</strong><span>Last contact</span></div>
+              </div>
+
+              <section class="panel contact-calls">
+                <div class="panel-header">
+                  <h2>Recent calls</h2>
+                  <a class="panel-link" href="calls.html">All calls →</a>
+                </div>
+                <ul class="call-list" id="contact-calls"></ul>
+              </section>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/contact.js"></script>
+</body>
+</html>

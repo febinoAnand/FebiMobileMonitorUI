@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Messages · SMS Reader</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="m-view" data-view="mobile" data-root="../" data-nav="messages" data-needs-phone>
+  <div class="m-phone">
+    <div class="m-app">
+      <header class="m-topbar" id="m-topbar"></header>
+      <main class="m-content" id="card">
+        <div class="m-head">
+          <div class="header-text">
+            <div class="title-row">
+              <h1>Messages</h1>
+              <span class="badge" id="unread-count" hidden>0</span>
+            </div>
+            <p class="subtitle">Inbox for <strong data-linked-number></strong></p>
+          </div>
+        </div>
+        
+        <div class="toolbar">
+          <div class="search">
+            <input type="search" id="search" placeholder="Search name, number or message" aria-label="Search messages">
+          </div>
+          <div class="chips" id="inbox-filter" role="group" aria-label="Filter conversations"></div>
+        </div>
+        
+        <ul class="list" id="thread-list">
+          <!-- Filled by js/inbox.js -->
+        </ul>
+      </main>
+    </div>
+    <nav class="m-tabbar" id="m-tabbar" aria-label="Main"></nav>
+  </div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/inbox.js"></script>
+</body>
+</html>

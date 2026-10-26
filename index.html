@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Choose your view · SMS Reader</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main class="auth">
+    <div class="auth-card">
+
+      <section class="auth-brand">
+        <div class="brand">
+          <span class="brand-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>
+          </span>
+          <span class="brand-name">SMS Reader</span>
+        </div>
+
+        <div class="auth-hero">
+          <h2>One login,<br>every phone.</h2>
+          <p>Read messages and calls from all your phones and SIMs in one place, on a phone or on a laptop.</p>
+        </div>
+
+        <div class="bubble-stack" aria-hidden="true">
+          <div class="float-bubble in">📱 Pixel 8 · SIM 1 &amp; SIM 2</div>
+          <div class="float-bubble out">💻 Same inbox on the web ✓</div>
+          <div class="float-bubble in">📞 Missed call · Work SIM</div>
+        </div>
+      </section>
+
+      <section class="auth-form-wrap">
+        <h1>Choose your view</h1>
+        <p class="auth-sub">How do you want to use SMS Reader on this device? You can switch any time.</p>
+
+        <div class="view-options">
+          <a href="login.html" class="view-option" data-choose-view="mobile">
+            <span class="view-option-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
+            </span>
+            <span class="view-option-text"><strong>Mobile view</strong><small>Phone layout with bottom tabs</small></span>
+            <span class="view-option-go">→</span>
+          </a>
+          <a href="login.html" class="view-option" data-choose-view="web">
+            <span class="view-option-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </span>
+            <span class="view-option-text"><strong>Web view</strong><small>Full dashboard with a sidebar</small></span>
+            <span class="view-option-go">→</span>
+          </a>
+        </div>
+
+        <p class="form-note">Your messages, calls and phones are the same in both views.</p>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/choose-view.js"></script>
+</body>
+</html>

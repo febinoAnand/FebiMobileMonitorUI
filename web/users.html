@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Users · SMS Reader</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body data-view="web" data-root="../" data-nav="users">
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="Main"></nav>
+
+    <div class="page page-wide">
+      <main class="card">
+        <header class="page-header">
+          <button class="icon-btn menu-btn" data-menu aria-label="Open menu">&#9776;</button>
+          <div class="header-text">
+            <h1>Users</h1>
+            <p class="subtitle" id="user-summary"></p>
+          </div>
+          <button class="btn" id="add-user-btn">
+            <span class="btn-icon" data-icon="plus"></span><span class="btn-label">Add user</span>
+          </button>
+        </header>
+
+        <div class="toolbar">
+          <div class="search">
+            <input type="search" id="search" placeholder="Search name, username or number" aria-label="Search users">
+          </div>
+          <div class="chips" id="role-filter" role="group" aria-label="Filter by role"></div>
+        </div>
+
+        <div class="scroll">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">User</th>
+                  <th scope="col">Mobile number</th>
+                  <th scope="col">Role</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Last login</th>
+                  <th scope="col"><span class="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody id="user-rows">
+                <!-- Filled by js/users.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Add / edit user -->
+  <dialog class="modal" id="user-modal" aria-labelledby="user-modal-title">
+    <form class="modal-card" id="user-form" novalidate>
+      <h2 id="user-modal-title">Add user</h2>
+      <p class="modal-sub" id="user-modal-sub">Give someone access to SMS Reader.</p>
+
+      <div class="form-grid">
+        <div class="field span-2" id="field-name">
+          <label for="u-name">Full name</label>
+          <input id="u-name" type="text" autocomplete="off" placeholder="e.g. Priya Sharma">
+          <small class="field-error" id="u-name-error"></small>
+        </div>
+        <div class="field" id="field-uname">
+          <label for="u-username">Username</label>
+          <input id="u-username" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="e.g. priya">
+          <small class="field-error" id="u-username-error"></small>
+        </div>
+        <div class="field" id="field-role">
+          <label for="u-role">Role</label>
+          <select id="u-role">
+            <option>Admin</option>
+            <option>Editor</option>
+            <option selected>Viewer</option>
+          </select>
+          <small class="field-error"></small>
+        </div>
+        <div class="field span-2" id="field-uphone">
+          <label for="u-phone">Mobile number <span class="optional">(needed to read messages)</span></label>
+          <div class="phone-input">
+            <select id="u-country" aria-label="Country code"></select>
+            <input id="u-phone" type="tel" inputmode="numeric" autocomplete="off" placeholder="98765 43210">
+          </div>
+          <small class="field-hint" id="u-phone-hint">They'll verify it with a one-time code when they sign in.</small>
+          <small class="field-error" id="u-phone-error"></small>
+        </div>
+        <div class="field span-2" id="field-uemail">
+          <label for="u-email">Email <span class="optional">(optional)</span></label>
+          <input id="u-email" type="email" autocomplete="off" placeholder="name@example.com">
+          <small class="field-error" id="u-email-error"></small>
+        </div>
+        <div class="field span-2" id="field-upassword">
+          <label for="u-password">Password</label>
+          <input id="u-password" type="password" autocomplete="new-password" placeholder="At least 4 characters">
+          <small class="field-error" id="u-password-error"></small>
+        </div>
+        <label class="switch span-2">
+          <input type="checkbox" id="u-active" checked>
+          <span class="switch-track" aria-hidden="true"></span>
+          <span>Active <small>— can sign in</small></span>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn" id="user-save-btn">Save user</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Delete confirmation -->
+  <dialog class="modal modal-sm" id="delete-modal" aria-labelledby="delete-title">
+    <div class="modal-card">
+      <h2 id="delete-title">Delete user?</h2>
+      <p class="modal-sub" id="delete-text"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="button" class="btn btn-danger" id="delete-confirm-btn">Delete</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/users.js"></script>
+</body>
+</html>

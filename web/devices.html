@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Phones &amp; numbers · SMS Reader</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body data-view="web" data-root="../" data-nav="devices" data-needs-phone>
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="Main"></nav>
+
+    <div class="page page-wide">
+      <main class="card">
+        <header class="page-header">
+          <button class="icon-btn menu-btn" data-menu aria-label="Open menu">&#9776;</button>
+          <div class="header-text">
+            <h1>Phones &amp; numbers</h1>
+            <p class="subtitle" id="devices-summary"></p>
+          </div>
+          <a class="btn" id="add-phone-btn" href="#">
+            <span class="btn-icon" data-icon="plus"></span><span class="btn-label">Add phone</span>
+          </a>
+        </header>
+
+        <div class="scroll">
+          <p class="info-note">One login works on all your phones. Each phone can hold two SIMs, and every number gets its own inbox and call log. Use <strong>View</strong> to see one number, or the switcher in the menu to see them all together.</p>
+          <div class="device-grid" id="device-list">
+            <!-- Filled by js/devices.js -->
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="modal modal-sm" id="remove-modal" aria-labelledby="remove-title">
+    <div class="modal-card">
+      <h2 id="remove-title">Remove?</h2>
+      <p class="modal-sub" id="remove-text"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="button" class="btn btn-danger" id="remove-confirm-btn">Remove</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/devices.js"></script>
+</body>
+</html>

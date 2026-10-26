@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Dashboard · SMS Reader</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body data-view="web" data-root="../" data-nav="dashboard" data-needs-phone>
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="Main"></nav>
+
+    <div class="page page-dashboard">
+      <main class="card">
+        <header class="page-header">
+          <button class="icon-btn menu-btn" data-menu aria-label="Open menu">&#9776;</button>
+          <div class="header-text">
+            <h1>Dashboard</h1>
+            <p class="subtitle" id="greeting"></p>
+          </div>
+        </header>
+
+        <div class="scroll">
+          <div class="dash">
+
+            <section class="stat-grid" aria-label="Summary">
+              <div class="panel stat-tile">
+                <span class="stat-icon" data-icon="messages"></span>
+                <strong class="stat-value" id="stat-messages">0</strong>
+                <span class="stat-label">Messages</span>
+              </div>
+              <div class="panel stat-tile">
+                <span class="stat-icon" data-icon="unread"></span>
+                <strong class="stat-value" id="stat-unread">0</strong>
+                <span class="stat-label">Unread</span>
+              </div>
+              <div class="panel stat-tile">
+                <span class="stat-icon" data-icon="calls"></span>
+                <strong class="stat-value" id="stat-calls">0</strong>
+                <span class="stat-label">Calls</span>
+              </div>
+              <div class="panel stat-tile">
+                <span class="stat-icon" data-icon="callMissed"></span>
+                <strong class="stat-value" id="stat-missed">0</strong>
+                <span class="stat-label">Missed calls</span>
+              </div>
+            </section>
+
+            <div class="dash-grid">
+              <section class="panel chart-panel">
+                <div class="panel-header">
+                  <h2>Messages per day</h2>
+                  <small>Last 7 days</small>
+                </div>
+                <div class="chart">
+                  <div class="chart-axis" id="chart-axis" aria-hidden="true"></div>
+                  <div class="chart-plot" id="chart-plot"></div>
+                </div>
+                <table class="sr-only" id="chart-table">
+                  <caption>Messages per day, last 7 days</caption>
+                  <thead><tr><th>Day</th><th>Received</th><th>Sent</th><th>Total</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </section>
+
+              <section class="panel">
+                <div class="panel-header">
+                  <h2>Your numbers</h2>
+                  <a class="panel-link" href="devices.html">Manage →</a>
+                </div>
+                <ul class="number-list" id="number-list"></ul>
+              </section>
+            </div>
+
+            <div class="dash-grid even">
+              <section class="panel">
+                <div class="panel-header">
+                  <h2>Recent messages</h2>
+                  <a class="panel-link" href="messages.html">Open inbox →</a>
+                </div>
+                <ul class="list" id="recent-list"></ul>
+              </section>
+
+              <section class="panel">
+                <div class="panel-header">
+                  <h2>Recent calls</h2>
+                  <a class="panel-link" href="calls.html">Call log →</a>
+                </div>
+                <ul class="call-list" id="recent-calls"></ul>
+              </section>
+            </div>
+
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/dashboard.js"></script>
+</body>
+</html>

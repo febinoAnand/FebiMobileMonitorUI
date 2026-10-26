@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Contacts · SMS Reader</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body data-view="web" data-root="../" data-nav="contacts" data-needs-phone>
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="Main"></nav>
+
+    <div class="page">
+      <main class="card">
+        <header class="page-header">
+          <button class="icon-btn menu-btn" data-menu aria-label="Open menu">&#9776;</button>
+          <div class="header-text">
+            <h1>Contacts</h1>
+            <p class="subtitle"><span id="contact-count">0</span> people who message <strong data-linked-number></strong></p>
+          </div>
+        </header>
+
+        <div class="toolbar">
+          <div class="search">
+            <input type="search" id="search" placeholder="Search contacts" aria-label="Search contacts">
+          </div>
+          <div class="chips" id="label-filter" role="group" aria-label="Filter by label"></div>
+        </div>
+
+        <div class="scroll">
+          <div class="contact-grid" id="contact-list">
+            <!-- Filled by js/contacts.js -->
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/contacts.js"></script>
+</body>
+</html>
