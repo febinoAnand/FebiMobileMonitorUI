@@ -92,10 +92,9 @@
   // ---------- Your numbers: activity per number; tap one to view only that number ----------
   const selected = getSelectedNumberId();
   const numberList = $("number-list");
-  for (const n of getNumbers()) {
+  for (const n of readableNumbers()) {
     const msgCount = MESSAGES.filter((m) => m.numberId === n.id).length;
     const missed = CALLS.filter((c) => c.numberId === n.id && c.type === "missed").length;
-    const device = deviceById(n.deviceId);
 
     const li = document.createElement("li");
     const btn = document.createElement("button");
@@ -107,7 +106,7 @@
       '<span class="number-main"><strong></strong><small></small></span>' +
       '<span class="number-stats"><span class="ns-msgs"></span><span class="ns-missed"></span></span>';
     btn.querySelector("strong").textContent = numberDisplay(n);
-    btn.querySelector("small").textContent = n.label + " · SIM " + n.slot + " · " + (device ? device.name : "");
+    btn.querySelector("small").textContent = "SIM " + n.slot + " · " + n.label;
     btn.querySelector(".ns-msgs").textContent = msgCount + (msgCount === 1 ? " message" : " messages");
     btn.querySelector(".ns-missed").textContent = missed ? missed + " missed" : "";
     btn.title = selected === n.id ? "Showing this number — click to show all numbers" : "Show only this number";

@@ -2513,7 +2513,7 @@ button:focus-visible {
 
 .device-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   gap: 16px;
   padding: 0 20px 24px;
 }
@@ -3082,3 +3082,417 @@ button:focus-visible {
   /* Chart tooltips wrap instead of spilling past narrow screens */
   .bar-tip { white-space: normal; width: max-content; max-width: 120px; text-align: center; }
 }
+
+/* =====================================================================
+   Sign up + "install the app on the phone"
+   ===================================================================== */
+.switch-auth { margin-top: 18px; text-align: center; font-size: 0.86rem; color: var(--muted); }
+.connect-step .switch-auth { margin-top: 0; }
+
+/* Install / pair steps */
+.pair-steps { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+.pair-steps li { display: flex; gap: 12px; align-items: flex-start; }
+.pair-steps strong { display: block; font-size: 0.92rem; }
+.pair-steps small { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 2px; }
+.pair-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--gradient);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.store-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.store-badge {
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.pair-code-row { display: flex; align-items: center; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
+.pair-code {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1.5px dashed var(--accent);
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.pair-code-note { display: block; margin-top: 4px; }
+.qr {
+  display: grid;
+  grid-template-columns: repeat(21, 1fr);
+  width: 92px;
+  height: 92px;
+  padding: 6px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+.qr span.on { background: #111827; }
+
+.pair-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--glass-strong);
+}
+.pair-status strong { display: block; font-size: 0.92rem; }
+.pair-status small { color: var(--muted); font-size: 0.78rem; }
+.pair-spinner {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 3px solid var(--accent-soft);
+  border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+.pair-status[data-state="connected"] { border-color: rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.08); }
+.pair-status[data-state="connected"] .pair-spinner {
+  animation: none;
+  border: none;
+  background: #10b981;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 1a11 11 0 1 0 0 22 11 11 0 0 0 0-22zm-1.5 15.5-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 1a11 11 0 1 0 0 22 11 11 0 0 0 0-22zm-1.5 15.5-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.perm-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.perm-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.86rem;
+  color: var(--muted);
+  transition: color 0.3s;
+}
+.perm-list li::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  transition: background 0.3s, border-color 0.3s;
+}
+.perm-list li.ok { color: var(--text); font-weight: 600; }
+.perm-list li.ok::before {
+  border-color: #10b981;
+  background: #10b981 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l4 4 10-10'/%3E%3C/svg%3E") center / 12px no-repeat;
+}
+.demo-btn { width: 100%; padding: 12px; border: 1.5px dashed var(--accent); }
+#pair-form .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+/* Phones page: app status on each phone */
+.app-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+}
+.app-status > div { flex: 1; min-width: 0; }
+.app-status strong { display: block; font-size: 0.86rem; }
+.app-status small { color: var(--muted); font-size: 0.76rem; }
+.app-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.app-status.connected { background: rgba(16, 185, 129, 0.1); }
+.app-status.connected .app-dot { background: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2); }
+.app-status.connected strong { color: #059669; }
+.app-status.pending { background: rgba(245, 158, 11, 0.12); }
+.app-status.pending .app-dot { background: #f59e0b; box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2); animation: pulse 2.4s ease-in-out infinite; }
+.app-status.pending strong { color: #b45309; }
+.app-status .btn { flex-shrink: 0; }
+.sim-actions .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+@media (prefers-color-scheme: dark) {
+  .app-status.connected strong { color: #34d399; }
+  .app-status.pending strong { color: #fbbf24; }
+}
+
+.app-required {
+  margin: 0 20px 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.12);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+.app-required strong { display: block; margin-bottom: 2px; }
+.m-view .app-required { margin: 0; }
+
+@media (max-width: 700px) {
+  .app-required { margin: 0 16px 12px; }
+}
+@media (max-width: 380px) {
+  .app-status { flex-wrap: wrap; }
+  .app-status .btn { margin-left: 20px; }
+  .qr { width: 80px; height: 80px; }
+  .pair-code { font-size: 1.1rem; }
+}
+
+/* =====================================================================
+   Export messages / call logs
+   ===================================================================== */
+.export-btn .btn-icon svg { width: 18px; height: 18px; }
+.export-what { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+.export-check { position: relative; cursor: pointer; }
+.export-check input { position: absolute; opacity: 0; pointer-events: none; }
+.export-check span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--glass-strong);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--muted);
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+.export-check span svg { width: 18px; height: 18px; }
+.export-check input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.export-check input:focus-visible + span { outline: 3px solid var(--accent-2); outline-offset: 2px; }
+.export-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.export-presets .chip { background: var(--accent-soft); }
+.export-presets .chip.active { background: var(--gradient); color: #fff; box-shadow: none; }
+#export-form .form-grid { margin-top: 12px; }
+.field input[type="date"] { min-height: 50px; }
+.export-summary { min-height: 1.2em; margin-top: 2px; font-size: 0.86rem; font-weight: 600; color: var(--accent); }
+#export-download-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+@media (max-width: 380px) {
+  .export-what { grid-template-columns: 1fr; }
+}
+
+/* =====================================================================
+   Login-first flow + "this phone" on the mobile app
+   ===================================================================== */
+.no-account {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 16px;
+  background: var(--accent-soft);
+  font-size: 0.86rem;
+}
+.no-account span { color: var(--muted); }
+.no-account .btn { align-self: flex-start; margin-top: 4px; }
+.field-error .link { font-size: inherit; }
+
+.this-phone-pick { display: flex; flex-direction: column; gap: 8px; }
+.this-phone-pick > strong { font-size: 0.86rem; }
+.this-phone-list { display: flex; flex-direction: column; gap: 8px; }
+.this-phone-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  background: var(--glass-strong);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.this-phone-option:hover { border-color: var(--accent); background: var(--accent-soft); }
+.this-phone-option .device-icon { width: 38px; height: 38px; border-radius: 12px; }
+.this-phone-option .device-icon svg { width: 20px; height: 20px; }
+.this-phone-option strong { display: block; font-size: 0.92rem; }
+.this-phone-option small { color: var(--muted); font-size: 0.78rem; }
+.this-phone-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.this-phone-or::before, .this-phone-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+.allow-list { display: flex; flex-direction: column; gap: 10px; }
+.allow-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--glass-strong);
+  transition: border-color 0.3s, background 0.3s;
+}
+.allow-item > div { flex: 1; min-width: 0; }
+.allow-item strong { display: block; font-size: 0.92rem; }
+.allow-item small { color: var(--muted); font-size: 0.78rem; }
+.allow-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+  background: var(--gradient);
+}
+.allow-icon svg { width: 20px; height: 20px; }
+.allow-item.ok { border-color: rgba(16, 185, 129, 0.5); background: rgba(16, 185, 129, 0.08); }
+.allow-item.ok .btn { background: #10b981; box-shadow: none; opacity: 1; }
+#allow-done-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+.this-phone-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--gradient);
+  color: #fff;
+  font-size: 0.64rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.app-status.locked { background: var(--accent-soft); }
+.app-status.locked .app-dot { background: var(--muted); }
+.app-status.locked strong { color: var(--text); }
+.sim-empty { flex: 1; color: var(--muted); font-size: 0.84rem; }
+.device-add.info { cursor: default; }
+.device-add.info:hover { border-color: var(--border); color: var(--muted); }
+@media (max-width: 380px) {
+  .allow-item { flex-wrap: wrap; }
+  .allow-item .btn { margin-left: 52px; }
+}
+/* The view chip on the login page is a button */
+button.view-chip { border: none; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+
+/* =====================================================================
+   My phone: SIM labels, change phone, SIM activity
+   ===================================================================== */
+.sim-label-select {
+  padding: 1px 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--glass-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sim-label-select option { background: var(--bg-1); color: var(--text); }
+.change-phone-btn { align-self: flex-start; color: #e11d48; background: rgba(225, 29, 72, 0.08); }
+.change-phone-btn:hover { background: rgba(225, 29, 72, 0.14); }
+
+.sim-activity h3 { font-size: 1.02rem; font-weight: 700; }
+.sim-activity-sub { margin-top: -8px; color: var(--muted); font-size: 0.82rem; }
+.sim-activity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.sim-activity-col {
+  --num-color: var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--num-color) 7%, transparent);
+  box-shadow: inset 0 3px 0 var(--num-color);
+}
+.sim-activity-col .sim-slot { align-self: flex-start; }
+.sim-activity-label { font-size: 0.95rem; }
+.sim-activity-col dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sim-activity-col dt { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.sim-activity-col dd { font-size: 1.25rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+@media (prefers-color-scheme: dark) {
+  .change-phone-btn { color: #fb7185; }
+}
+
+/* SIM label select and "Verified" sit side by side and wrap cleanly */
+.sim-info small { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+
+/* "+ Add SIM 2 number" is a button that looks like a link */
+button.sim-add { text-align: left; color: var(--accent); font-weight: 700; font-size: 0.86rem; }
+#add-sim-modal .field + .field { margin-top: 10px; }
+
+/* =====================================================================
+   OTP autofill: incoming SMS banner + filled boxes
+   ===================================================================== */
+.sms-note {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  z-index: 200;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: min(380px, calc(100% - 24px));
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--glass-strong);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translate(-50%, -140%);
+  transition: transform 0.45s var(--ease), opacity 0.3s;
+  pointer-events: none;
+}
+.sms-note.show { opacity: 1; transform: translate(-50%, 0); }
+.sms-note strong { display: block; font-size: 0.74rem; color: var(--muted); }
+.sms-note-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+}
+.sms-note-icon svg { width: 17px; height: 17px; }
+.m-view .m-phone .sms-note, .m-view .auth-card .sms-note { top: calc(14px + env(safe-area-inset-top)); }
+@media (min-width: 521px) {
+  .m-view .m-phone .sms-note, .m-view .auth-card .sms-note { top: 48px; }
+}
+.field .otp-boxes input.autofilled {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  animation: pop 0.3s var(--ease);
+}
+
+/* Choose your view: "Suggested" tag on the option that suits this screen */
+.view-option-badge {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #059669;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+@media (prefers-color-scheme: dark) { .view-option-badge { color: #34d399; } }
+@media (max-width: 380px) { .view-option-badge { display: none; } }
+
+.check-hint { color: var(--muted); font-size: 0.74rem; }

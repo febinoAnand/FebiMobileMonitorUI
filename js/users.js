@@ -31,7 +31,7 @@
     }
   }
 
-  // The signed-in user's numbers are the ones on their linked phones (first one shown, "+2" for the rest)
+  // The signed-in user's numbers are the SIMs in their phone (SIM 1 shown, "+1" when there is a SIM 2)
   function phoneOf(u) {
     if (u.username === me) {
       const linked = getNumbers();
@@ -230,7 +230,7 @@
     fields.phone.disabled = isMe;
     const hint = $("u-phone-hint");
     if (isMe) {
-      hint.innerHTML = 'Your numbers come from your linked phones. <a class="link" href="devices.html">Manage phones &amp; numbers →</a>';
+      hint.innerHTML = 'Your numbers are the SIMs in your phone. <a class="link" href="devices.html">Manage my phone →</a>';
     } else {
       hint.textContent = phone && phone.verified
         ? "Verified. Changing it means they'll need to verify the new number."

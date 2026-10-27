@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#6366f1">
   <title>Sign in · SMS Reader</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="../css/styles.css">
 </head>
-<body>
-  <!-- In the mobile view this page sits in the same phone frame as the app -->
-  <script>try { if (JSON.parse(localStorage.getItem("smsReader.view")) === "mobile") document.body.classList.add("m-view"); } catch (e) {}</script>
+<body data-login-view="web" data-root="../">
   <main class="auth">
     <div class="auth-card">
 
@@ -40,13 +38,13 @@
           </span>
           <span class="brand-name">SMS Reader</span>
         </div>
-        <a class="view-chip" href="index.html" id="view-chip"><span id="view-chip-text">Web view</span><b>Change</b></a>
+        <a class="view-chip" href="../index.html" id="view-chip"><span id="view-chip-text">Web view</span><b>Change</b></a>
         <h1>Welcome back 👋</h1>
         <p class="auth-sub">Sign in to read your messages</p>
 
         <form id="login-form" novalidate>
           <div class="field" id="field-username">
-            <label for="username">Username</label>
+            <label for="username">Username, email or mobile number</label>
             <input id="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Enter your username">
             <small class="field-error" id="username-error"></small>
           </div>
@@ -61,21 +59,27 @@
           </div>
 
           <div class="form-row">
-            <label class="check"><input type="checkbox" id="remember" checked> Remember me</label>
+            <label class="check"><input type="checkbox" id="remember"> Remember me <small class="check-hint">for 30 days</small></label>
             <button type="button" class="link link-btn" id="forgot">Forgot password?</button>
           </div>
 
           <button type="submit" class="btn-primary" id="submit-btn">Sign in</button>
         </form>
 
+        <div class="no-account" id="no-account" hidden>
+          <strong>Don't have an account?</strong>
+          <span>Create one with your email and mobile number, then set your username and password.</span>
+          <a class="btn" href="register.html">Create an account</a>
+        </div>
+        <p class="switch-auth" id="switch-auth">Don't have an account? <a class="link" href="register.html">Create an account</a></p>
         <p class="form-note" id="form-note">Demo login: username <strong>admin</strong>, password <strong>admin</strong></p>
       </section>
 
     </div>
   </main>
 
-  <script src="js/data.js"></script>
-  <script src="js/common.js"></script>
-  <script src="js/login.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/login.js"></script>
 </body>
 </html>
