@@ -72,10 +72,9 @@
           <div class="field" id="field-role">
             <label for="u-role">Role</label>
             <select id="u-role">
-              <option>Admin</option>
-              <option>Editor</option>
-              <option selected>Viewer</option>
-            </select>
+            <option>Admin</option>
+            <option selected>User</option>
+          </select>
             <small class="field-error"></small>
           </div>
           <div class="field span-2" id="field-uphone">
@@ -93,8 +92,9 @@
             <small class="field-error" id="u-email-error"></small>
           </div>
           <div class="field span-2" id="field-upassword">
-            <label for="u-password">Password</label>
-            <input id="u-password" type="password" autocomplete="new-password" placeholder="At least 4 characters">
+            <label for="u-password" id="u-password-label">Password</label>
+            <input id="u-password" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+            <small class="field-hint" id="u-password-hint"></small>
             <small class="field-error" id="u-password-error"></small>
           </div>
           <label class="switch span-2">

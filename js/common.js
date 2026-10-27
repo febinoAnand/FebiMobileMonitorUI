@@ -91,7 +91,10 @@ const REMEMBER_DAYS = 30;
 
 function getUser() {
   const user = readJSON(localStorage, USER_KEY) || readJSON(sessionStorage, USER_KEY);
-  if (user && user.expiresAt && Date.now() < user.expiresAt) return user;
+  // Valid until it expires — and only while the account still exists and is active
+  // (an admin deleting or deactivating someone signs them out)
+  const account = user && getAccounts().find((a) => a.username === user.username);
+  if (user && user.expiresAt && Date.now() < user.expiresAt && account && account.active) return user;
   if (user) {
     removeKey(localStorage, USER_KEY);
     removeKey(sessionStorage, USER_KEY);
@@ -106,12 +109,33 @@ function saveUser(user, remember) {
   writeJSON(remember ? localStorage : sessionStorage, USER_KEY, { ...user, expiresAt });
 }
 
-// Accounts created on the sign-up page (UI only — the backend will store these, with hashed passwords)
-// { name, username, password, email, country, number, createdAt }
-const ACCOUNTS_KEY = "smsReader.accounts";
+// ---------- User directory ----------
+// Every account that can sign in (UI only — the backend will store these, with hashed passwords).
+// { id, name, username, password, email, country, number, phoneVerified, role: "Admin" | "User", active, createdAt, lastLogin }
+// Admins see and manage everyone on the Users page; every user manages themselves on the Profile page.
+const ACCOUNTS_KEY = "smsReader.directory";
 
 function getAccounts() {
-  return readJSON(localStorage, ACCOUNTS_KEY) || [];
+  const saved = readJSON(localStorage, ACCOUNTS_KEY);
+  if (Array.isArray(saved)) return saved;
+
+  // First run: the demo admin, the sample users, and any accounts made by an earlier version
+  const now = new Date().toISOString();
+  const list = [
+    { id: "u1", name: "Admin", username: "admin", password: "admin", email: "admin@smsreader.com", country: "+91", number: "", phoneVerified: false, role: "Admin", active: true, createdAt: now, lastLogin: null },
+    ...USERS.filter((u) => u.username !== "admin").map((u) => ({
+      id: u.id, name: u.name, username: u.username, password: "password", email: u.email,
+      country: u.phoneCountry, number: u.phoneNumber, phoneVerified: !!u.phoneVerified,
+      role: "User", active: u.active, createdAt: now, lastLogin: u.lastLogin
+    }))
+  ];
+  for (const old of readJSON(localStorage, "smsReader.accounts") || []) {
+    if (list.some((x) => x.username === old.username)) continue;
+    list.push({ id: "u" + Date.now() + list.length, name: old.name, username: old.username, password: old.password, email: old.email,
+      country: old.country, number: old.number, phoneVerified: true, role: "User", active: true, createdAt: old.createdAt || now, lastLogin: null });
+  }
+  saveAccounts(list);
+  return list;
 }
 
 function saveAccounts(list) {
@@ -123,9 +147,55 @@ function findAccount(identifier) {
   const id = identifier.trim().toLowerCase();
   const digits = id.replace(/\D/g, "");
   return getAccounts().find((a) =>
-    a.username === id || a.email.toLowerCase() === id ||
-    (digits.length >= 8 && (a.number === digits || (a.country + a.number).replace(/\D/g, "") === digits))
+    a.username === id || (a.email || "").toLowerCase() === id ||
+    (digits.length >= 8 && a.number && (a.number === digits || (a.country + a.number).replace(/\D/g, "") === digits))
   );
+}
+
+// The signed-in person's directory entry
+function currentAccount() {
+  const user = getUser();
+  return user ? getAccounts().find((a) => a.username === user.username) || null : null;
+}
+
+function isAdmin() {
+  const account = currentAccount();
+  return !!(account && account.role === "Admin" && account.active);
+}
+
+function updateAccount(id, changes) {
+  const list = getAccounts();
+  const account = list.find((a) => a.id === id);
+  Object.assign(account, changes);
+  saveAccounts(list);
+  return account;
+}
+
+// A username change moves that person's phone and settings along with it
+function renameUserData(oldName, newName) {
+  for (const base of ["smsReader.account", "smsReader.selectedNumber"]) {
+    const value = localStorage.getItem(base + "." + oldName);
+    if (value === null) continue;
+    localStorage.setItem(base + "." + newName, value);
+    localStorage.removeItem(base + "." + oldName);
+  }
+}
+
+// Remove everything stored for a deleted user
+function removeUserData(username) {
+  for (const base of ["smsReader.account", "smsReader.selectedNumber"]) removeKey(localStorage, base + "." + username);
+}
+
+// Password rules shared by sign-up, Users and Profile
+function passwordError(password) {
+  return password.length < 6 ? "Password must be at least 6 characters" : "";
+}
+
+function usernameError(username, ownId) {
+  if (!username) return "Please enter a username";
+  if (!/^[a-z0-9._-]{3,}$/.test(username)) return "3+ characters: letters, numbers, . _ -";
+  if (getAccounts().some((a) => a.username === username && a.id !== ownId)) return "This username is taken";
+  return "";
 }
 
 // Six one-digit boxes that move along as you type, accept paste, and submit the form when full.
@@ -647,6 +717,8 @@ const ICONS = {
   close: svg('<path d="M18 6 6 18M6 6l12 12"/>'),
   back: svg('<path d="M19 12H5M11 19l-7-7 7-7"/>'),
   chevron: svg('<path d="m9 18 6-6-6-6"/>'),
+  profile: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
+  key: svg('<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8"/><path d="m17 6 3 3"/><path d="m15 8 2 2"/>'),
   users: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 11-7.4"/><path d="M19 15v6M16 18h6"/>'),
   plus: svg('<path d="M12 5v14M5 12h14"/>', 2.4),
   edit: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>'),
@@ -656,6 +728,7 @@ const ICONS = {
 
 // ---------- Navigation (same items in the web sidebar and the mobile tabs/menu) ----------
 
+// Menu items; adminOnly ones are shown to admins only
 const NAV_SECTIONS = [
   {
     title: "Menu",
@@ -670,7 +743,8 @@ const NAV_SECTIONS = [
     title: "Manage",
     items: [
       { nav: "devices", href: "devices.html", label: "My phone", icon: "phone" },
-      { nav: "users", href: "users.html", label: "Users", icon: "users" }
+      { nav: "profile", href: "profile.html", label: "Profile", icon: "profile" },
+      { nav: "users", href: "users.html", label: "Users", icon: "users", adminOnly: true }
     ]
   }
 ];
@@ -756,7 +830,7 @@ function renderSidebar() {
     "</div>" +
     NAV_SECTIONS.map((section) =>
       '<div class="nav-section">' + section.title + "</div>" +
-      section.items.map((item) => {
+      section.items.filter((item) => !item.adminOnly || isAdmin()).map((item) => {
         const count = navBadgeCount(item.nav);
         return '<a class="nav-link' + (item.nav === current ? ' active" aria-current="page' : "") + '" href="' + item.href + '" title="' + item.label + '" data-nav-link="' + item.nav + '">' +
           ICONS[item.icon] + '<span class="nav-label">' + item.label + "</span>" +
@@ -843,7 +917,7 @@ function renderMobileShell() {
         '<button type="button" class="icon-btn" data-close-sheet aria-label="Close menu">' + ICONS.close + "</button></div>" +
       NAV_SECTIONS.map((section) =>
         '<p class="m-sheet-title">' + section.title + "</p>" +
-        section.items.map((item) =>
+        section.items.filter((item) => !item.adminOnly || isAdmin()).map((item) =>
           '<a class="m-sheet-link' + (item.nav === current ? " active" : "") + '" href="' + item.href + '">' + ICONS[item.icon] + "<span>" + item.label + "</span>" + ICONS.chevron + "</a>"
         ).join("")
       ).join("") +

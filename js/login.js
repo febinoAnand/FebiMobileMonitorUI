@@ -1,10 +1,6 @@
-// Login page (UI only). Accepts the demo account admin / admin, or an account made on the sign-up page
-// (username, email or mobile number + password).
-// This check runs in the browser and is NOT secure — replace it with a call to the
-// backend login API before going live.
-
-const DEMO_USERNAME = "admin";
-const DEMO_PASSWORD = "admin";
+// Login page (UI only). Checks the user directory: username, email or mobile number + password.
+// The demo admin is admin / admin. This check runs in the browser and is NOT secure — replace it
+// with a call to the backend login API before going live.
 
 (function () {
   // The view is asked first on the shared index page; each view has its own login and sign-up page
@@ -71,15 +67,15 @@ const DEMO_PASSWORD = "admin";
     btn.textContent = "Signing in…";
 
     setTimeout(() => {
-      if (usernameValue.toLowerCase() === DEMO_USERNAME && password.value === DEMO_PASSWORD) {
-        saveUser({ name: "Admin", username: DEMO_USERNAME }, $("remember").checked);
-        location.href = nextPage();
-        return;
-      }
-
-      // Accounts made on the sign-up page: username, email or mobile number + password
       const account = findAccount(usernameValue);
       if (account && account.password === password.value) {
+        if (!account.active) {
+          btn.disabled = false;
+          btn.textContent = "Sign in";
+          setError("field-password", password, "password-error", "This account has been deactivated. Please contact your admin.");
+          return;
+        }
+        updateAccount(account.id, { lastLogin: new Date().toISOString() });
         saveUser({ name: account.name, username: account.username, email: account.email, country: account.country, number: account.number }, $("remember").checked);
         location.href = nextPage();
         return;
@@ -89,7 +85,7 @@ const DEMO_PASSWORD = "admin";
       btn.textContent = "Sign in";
 
       // No account with that username / email / number: offer to create one
-      if (!account && usernameValue.toLowerCase() !== DEMO_USERNAME) {
+      if (!account) {
         setError("field-username", username, "username-error", "");
         $("field-username").classList.add("invalid");
         $("username-error").innerHTML = 'No account found. Don\'t have one? <a class="link" href="register.html">Create an account</a>';

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Signed-out visitors go to the login page before anything is shown -->
+  <script>(function () { var ok = false; try { var u = JSON.parse(localStorage.getItem("smsReader.user") || sessionStorage.getItem("smsReader.user")); ok = !!(u && u.expiresAt && Date.now() < u.expiresAt); } catch (e) {} if (!ok) { document.documentElement.style.visibility = "hidden"; location.replace("login.html"); } })();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Profile · SMS Reader</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body data-view="web" data-root="../" data-nav="profile">
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="Main"></nav>
+
+    <div class="page page-wide">
+      <main class="card">
+        <header class="page-header">
+          <button class="icon-btn menu-btn" data-menu aria-label="Open menu">&#9776;</button>
+          <div class="header-text">
+            <h1>Profile</h1>
+            <p class="subtitle">Your account and password</p>
+          </div>
+        </header>
+
+        <div class="scroll">
+          <div class="profile-wrap">
+            <section class="profile-card">
+              <div class="avatar avatar-lg" id="profile-avatar"></div>
+              <div class="profile-id">
+                <h2 id="profile-name"></h2>
+                <p><span id="profile-handle"></span> · <span class="role" id="profile-role"></span></p>
+                <small id="profile-since"></small>
+              </div>
+              <div class="profile-phone">
+                <small>Mobile number</small>
+                <strong id="profile-number"></strong>
+                <a class="link" href="devices.html">My phone →</a>
+              </div>
+            </section>
+            <p class="info-note" id="admin-note" hidden>You're an admin. Manage other people's accounts on the <a class="link" href="users.html">Users</a> page.</p>
+
+            <div class="profile-grid">
+              <form class="panel profile-form" id="details-form" novalidate>
+                <h3>Account details</h3>
+                <div class="field" id="field-pf-name">
+                  <label for="pf-name">Full name</label>
+                  <input id="pf-name" type="text" autocomplete="name">
+                  <small class="field-error" id="pf-name-error"></small>
+                </div>
+                <div class="field" id="field-pf-username">
+                  <label for="pf-username">Username</label>
+                  <input id="pf-username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false">
+                  <small class="field-hint">You sign in with this, your email or your mobile number.</small>
+                  <small class="field-error" id="pf-username-error"></small>
+                </div>
+                <div class="field" id="field-pf-email">
+                  <label for="pf-email">Email</label>
+                  <input id="pf-email" type="email" autocomplete="email">
+                  <small class="field-error" id="pf-email-error"></small>
+                </div>
+                <button type="submit" class="btn">Save changes</button>
+              </form>
+
+              <form class="panel profile-form" id="password-form" novalidate>
+                <h3>Change password <button type="button" class="toggle-pw-inline link-btn link" id="pf-toggle-pw" aria-label="Show passwords">Show</button></h3>
+                <div class="field" id="field-pf-current">
+                  <label for="pf-current">Current password</label>
+                  <input id="pf-current" type="password" autocomplete="current-password">
+                  <small class="field-error" id="pf-current-error"></small>
+                </div>
+                <div class="field" id="field-pf-new">
+                  <label for="pf-new">New password</label>
+                  <input id="pf-new" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+                  <small class="field-error" id="pf-new-error"></small>
+                </div>
+                <div class="field" id="field-pf-confirm">
+                  <label for="pf-confirm">Confirm new password</label>
+                  <input id="pf-confirm" type="password" autocomplete="new-password">
+                  <small class="field-error" id="pf-confirm-error"></small>
+                </div>
+                <button type="submit" class="btn">Change password</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/profile.js"></script>
+</body>
+</html>
