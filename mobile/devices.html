@@ -2,27 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- Signed-out visitors go to the login page before anything is shown -->
+  <script>(function () { var ok = false; try { var u = JSON.parse(localStorage.getItem("smsReader.user") || sessionStorage.getItem("smsReader.user")); ok = !!(u && u.expiresAt && Date.now() < u.expiresAt); } catch (e) {} if (!ok) { document.documentElement.style.visibility = "hidden"; location.replace("login.html"); } })();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#6366f1">
-  <title>Phones &amp; numbers · SMS Reader</title>
+  <title>My phone · SMS Reader</title>
   <link rel="stylesheet" href="../css/styles.css">
 </head>
-<body class="m-view" data-view="mobile" data-root="../" data-nav="devices" data-needs-phone>
+<body class="m-view" data-view="mobile" data-root="../" data-nav="devices">
   <div class="m-phone">
     <div class="m-app">
       <header class="m-topbar" id="m-topbar"></header>
       <main class="m-content" id="card">
         <div class="m-head">
           <div class="header-text">
-            <h1>Phones</h1>
+            <h1>My phone</h1>
             <p class="subtitle" id="devices-summary"></p>
           </div>
-          <a class="btn" id="add-phone-btn" href="#" aria-label="Add phone">
-            <span class="btn-icon" data-icon="plus"></span><span class="btn-label">Add phone</span>
-          </a>
         </div>
         
-        <p class="info-note">One login works on all your phones. Each phone can hold two SIMs. Use <strong>View</strong> to see one number, or the switcher at the top to see them all.</p>
+          <p class="info-note">Your account is linked to one phone. If it is dual SIM, you can read messages and calls from both SIMs together, or switch to one SIM at a time.</p>
         
         <div class="device-grid" id="device-list">
           <!-- Filled by js/devices.js -->

@@ -39,13 +39,26 @@ function removeKey(storage, key) {
 
 const VIEW_KEY = "smsReader.view";
 
+// Until someone picks a view, phones get the mobile view and computers the web view
 function getView() {
   const v = readJSON(localStorage, VIEW_KEY);
-  return v === "mobile" ? "mobile" : "web";
+  if (v === "mobile" || v === "web") return v;
+  return window.matchMedia("(max-width: 700px), (pointer: coarse) and (max-width: 1024px)").matches ? "mobile" : "web";
+}
+
+// True once someone has picked a view on the first page
+function hasChosenView() {
+  const v = readJSON(localStorage, VIEW_KEY);
+  return v === "mobile" || v === "web";
 }
 
 function setView(view) {
   writeJSON(localStorage, VIEW_KEY, view === "mobile" ? "mobile" : "web");
+}
+
+// The login page of the chosen view (web/login.html or mobile/login.html)
+function loginUrl() {
+  return appUrl("login.html");
 }
 
 // A page inside the app, in the chosen view, from anywhere
@@ -71,33 +84,217 @@ function contactUrl(contactId) {
 
 const USER_KEY = "smsReader.user";
 
+// A signed-in session lasts 8 hours, or 30 days with "Remember me" (kept after the browser closes).
+// Sessions from older versions have no expiry and count as signed out.
+const SESSION_HOURS = 8;
+const REMEMBER_DAYS = 30;
+
 function getUser() {
-  return readJSON(localStorage, USER_KEY) || readJSON(sessionStorage, USER_KEY);
+  const user = readJSON(localStorage, USER_KEY) || readJSON(sessionStorage, USER_KEY);
+  if (user && user.expiresAt && Date.now() < user.expiresAt) return user;
+  if (user) {
+    removeKey(localStorage, USER_KEY);
+    removeKey(sessionStorage, USER_KEY);
+  }
+  return null;
 }
 
 function saveUser(user, remember) {
-  writeJSON(remember ? localStorage : sessionStorage, USER_KEY, user);
+  removeKey(localStorage, USER_KEY);
+  removeKey(sessionStorage, USER_KEY);
+  const expiresAt = Date.now() + (remember ? REMEMBER_DAYS * 24 : SESSION_HOURS) * 3600 * 1000;
+  writeJSON(remember ? localStorage : sessionStorage, USER_KEY, { ...user, expiresAt });
+}
+
+// Accounts created on the sign-up page (UI only — the backend will store these, with hashed passwords)
+// { name, username, password, email, country, number, createdAt }
+const ACCOUNTS_KEY = "smsReader.accounts";
+
+function getAccounts() {
+  return readJSON(localStorage, ACCOUNTS_KEY) || [];
+}
+
+function saveAccounts(list) {
+  writeJSON(localStorage, ACCOUNTS_KEY, list);
+}
+
+// Find an account by username, email or mobile number
+function findAccount(identifier) {
+  const id = identifier.trim().toLowerCase();
+  const digits = id.replace(/\D/g, "");
+  return getAccounts().find((a) =>
+    a.username === id || a.email.toLowerCase() === id ||
+    (digits.length >= 8 && (a.number === digits || (a.country + a.number).replace(/\D/g, "") === digits))
+  );
+}
+
+// Six one-digit boxes that move along as you type, accept paste, and submit the form when full.
+// autofill() fills them from the incoming SMS by itself (see below).
+function setupOtpBoxes(container, form) {
+  for (let i = 0; i < 6; i++) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.inputMode = "numeric";
+    input.maxLength = 1;
+    input.autocomplete = i === 0 ? "one-time-code" : "off";
+    input.setAttribute("aria-label", "Digit " + (i + 1));
+    container.appendChild(input);
+  }
+  const inputs = [...container.querySelectorAll("input")];
+
+  const fillFrom = (index, text) => {
+    const digits = text.replace(/\D/g, "").slice(0, 6 - index).split("");
+    digits.forEach((d, k) => {
+      inputs[index + k].value = d;
+      inputs[index + k].classList.add("filled");
+    });
+    inputs[Math.min(index + digits.length, 5)].focus();
+    if (inputs.every((inp) => inp.value)) form.requestSubmit();
+  };
+
+  let autofillRun = 0; // bumped to cancel an autofill that is still running
+  const markTyped = () => { autofillRun++; };
+
+  inputs.forEach((input, i) => {
+    input.addEventListener("keydown", markTyped);
+    input.addEventListener("input", () => {
+      const value = input.value.replace(/\D/g, "");
+      input.value = "";
+      input.classList.remove("filled");
+      if (value) fillFrom(i, value);
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !input.value && i > 0) {
+        inputs[i - 1].value = "";
+        inputs[i - 1].classList.remove("filled");
+        inputs[i - 1].focus();
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft" && i > 0) {
+        inputs[i - 1].focus();
+      } else if (e.key === "ArrowRight" && i < 5) {
+        inputs[i + 1].focus();
+      }
+    });
+    input.addEventListener("paste", (e) => {
+      e.preventDefault();
+      fillFrom(i, (e.clipboardData || window.clipboardData).getData("text"));
+    });
+    input.addEventListener("focus", () => input.select());
+  });
+
+  const clear = () => inputs.forEach((inp) => { inp.value = ""; inp.classList.remove("filled", "autofilled"); });
+
+  // Types the code in digit by digit, then verifies
+  async function typeIn(code, run) {
+    clear();
+    for (let i = 0; i < 6; i++) {
+      if (run !== autofillRun) return;
+      inputs[i].value = code[i];
+      inputs[i].classList.add("filled", "autofilled");
+      await new Promise((r) => setTimeout(r, 90));
+    }
+    if (run === autofillRun) form.requestSubmit();
+  }
+
+  // Fill the code from the SMS without typing:
+  //  - Android Chrome: the WebOTP API reads the SMS once the user taps Allow. The backend SMS must end with
+  //    "@<your domain> #<code>" on its own line, e.g. a last line of "@smsreader.app #123456".
+  //  - iPhone: autocomplete="one-time-code" on the first box offers the code above the keyboard.
+  //  - This demo (no real SMS): an SMS notification appears and the code fills in by itself.
+  function autofill(code) {
+    const run = ++autofillRun;
+    if ("OTPCredential" in window && location.protocol === "https:") {
+      const abort = new AbortController();
+      form.addEventListener("submit", () => abort.abort(), { once: true });
+      navigator.credentials.get({ otp: { transport: ["sms"] }, signal: abort.signal })
+        .then((otp) => { if (otp && otp.code) typeIn(otp.code, run); })
+        .catch(() => { /* cancelled or not allowed: typing still works */ });
+    }
+    if (code) {
+      setTimeout(() => {
+        if (run !== autofillRun) return;
+        showSmsNotification(code);
+        setTimeout(() => typeIn(code, run), 1100);
+      }, 1200);
+    }
+  }
+
+  return {
+    code: () => inputs.map((inp) => inp.value).join(""),
+    clear: () => { autofillRun++; clear(); },
+    focus: (index = 0) => inputs[index].focus(),
+    autofill
+  };
+}
+
+// A phone-style "new message" banner at the top of the screen (inside the phone frame in the mobile view)
+function showSmsNotification(code) {
+  let note = document.querySelector(".sms-note");
+  if (!note) {
+    note = document.createElement("div");
+    note.className = "sms-note";
+    note.setAttribute("role", "status");
+    note.innerHTML = '<span class="sms-note-icon">' + ICONS.messages + '</span><div><strong>Messages · now</strong><span class="sms-note-text"></span></div>';
+    (document.querySelector(".m-phone, .auth-card") || document.body).appendChild(note);
+  }
+  note.querySelector(".sms-note-text").textContent = code + " is your SMS Reader verification code. Don't share it with anyone.";
+  note.classList.remove("show");
+  void note.offsetWidth;
+  note.classList.add("show");
+  clearTimeout(showSmsNotification.timer);
+  showSmsNotification.timer = setTimeout(() => note.classList.remove("show"), 3600);
+}
+
+// Counts down before "Resend code" can be used again
+function startResendTimer(button, label, seconds = 30) {
+  let left = seconds;
+  button.disabled = true;
+  label.textContent = "in " + left + "s";
+  clearInterval(startResendTimer.timer);
+  startResendTimer.timer = setInterval(() => {
+    left -= 1;
+    label.textContent = left > 0 ? "in " + left + "s" : "";
+    if (left <= 0) {
+      clearInterval(startResendTimer.timer);
+      button.disabled = false;
+    }
+  }, 1000);
 }
 
 function logout() {
   removeKey(localStorage, USER_KEY);
   removeKey(sessionStorage, USER_KEY);
-  location.href = ROOT + "login.html";
+  location.href = loginUrl();
 }
 
-// ---------- Phones & numbers ----------
-// One login can link several phones (devices); each phone holds SIM 1 and optionally SIM 2.
-// account: { seq, devices: [{ id, name, type: "android" | "iphone", addedAt }],
+// ---------- My phone and its SIMs ----------
+// One login = one phone. The phone holds SIM 1 and, if it is dual SIM, SIM 2.
+// account: { seq, devices: [{ id, name, type: "android" | "iphone", addedAt, app }],   (at most one phone)
 //            numbers: [{ id, deviceId, slot: 1 | 2, country, number, label, verifiedAt }] }
 
 const ACCOUNT_KEY = "smsReader.account";
 const SELECTED_KEY = "smsReader.selectedNumber";
 
-function getAccount() {
-  const saved = readJSON(localStorage, ACCOUNT_KEY);
-  if (saved && Array.isArray(saved.devices) && Array.isArray(saved.numbers)) return saved;
+// Each login keeps its own phone, so several people can use the same browser
+function accountKey(base) {
+  const user = getUser();
+  return user && user.username ? base + "." + user.username : base;
+}
 
-  // Earlier versions linked a single number; carry it over as this account's first phone
+function getAccount() {
+  const saved = readJSON(localStorage, accountKey(ACCOUNT_KEY));
+  if (saved && Array.isArray(saved.devices) && Array.isArray(saved.numbers)) {
+    // Earlier versions allowed several phones per login: keep the first one
+    if (saved.devices.length > 1) {
+      const keep = saved.devices[0];
+      saved.devices = [keep];
+      saved.numbers = saved.numbers.filter((n) => n.deviceId === keep.id);
+      saveAccount(saved);
+    }
+    return saved;
+  }
+
+  // The first version linked a single number; carry it over as this account's phone
   const old = readJSON(localStorage, "smsReader.phone");
   if (old && old.number) {
     const migrated = {
@@ -113,20 +310,21 @@ function getAccount() {
 }
 
 function saveAccount(account) {
-  writeJSON(localStorage, ACCOUNT_KEY, account);
+  writeJSON(localStorage, accountKey(ACCOUNT_KEY), account);
+}
+
+// The account's phone, or null before it is set up
+function getPhone() {
+  return getAccount().devices[0] || null;
 }
 
 function getDevices() {
   return getAccount().devices;
 }
 
-// Numbers in a stable order: by phone, then SIM slot
+// The phone's SIMs in slot order
 function getNumbers() {
-  const account = getAccount();
-  const order = account.devices.map((d) => d.id);
-  return account.numbers
-    .slice()
-    .sort((a, b) => order.indexOf(a.deviceId) - order.indexOf(b.deviceId) || a.slot - b.slot);
+  return getAccount().numbers.slice().sort((a, b) => a.slot - b.slot);
 }
 
 function numberById(id) {
@@ -141,29 +339,35 @@ function numberDisplay(n) {
   return formatPhone(n.country, n.number);
 }
 
+// SIM 1 green, SIM 2 indigo — the same colours everywhere
 function numberColor(id) {
-  const index = getNumbers().findIndex((n) => n.id === id);
-  return NUMBER_COLORS[(index < 0 ? 0 : index) % NUMBER_COLORS.length];
+  const n = numberById(id);
+  return NUMBER_COLORS[n && n.slot === 2 ? 1 : 0];
+}
+
+// SIMs whose messages and calls are shown (all of the phone's SIMs once signed in)
+function readableNumbers() {
+  return getNumbers();
 }
 
 // "All numbers", or the one number picked in the switcher
 function getSelectedNumberId() {
-  const id = readJSON(localStorage, SELECTED_KEY);
-  return id && numberById(id) ? id : "all";
+  const id = readJSON(localStorage, accountKey(SELECTED_KEY));
+  return id && readableNumbers().some((n) => n.id === id) ? id : "all";
 }
 
 function setSelectedNumberId(id) {
-  writeJSON(localStorage, SELECTED_KEY, id);
+  writeJSON(localStorage, accountKey(SELECTED_KEY), id);
 }
 
 function activeNumberIds() {
   const selected = getSelectedNumberId();
-  return selected === "all" ? getNumbers().map((n) => n.id) : [selected];
+  return selected === "all" ? readableNumbers().map((n) => n.id) : [selected];
 }
 
 // Show which number a message/call used only when several numbers are on screen together
 function showNumberTags() {
-  return getSelectedNumberId() === "all" && getNumbers().length > 1;
+  return getSelectedNumberId() === "all" && readableNumbers().length > 1;
 }
 
 function numberTag(numberId) {
@@ -172,7 +376,7 @@ function numberTag(numberId) {
   tag.className = "num-tag";
   if (!n) return tag;
   tag.textContent = n.label + " · SIM " + n.slot;
-  tag.title = numberDisplay(n) + " on " + ((deviceById(n.deviceId) || {}).name || "phone");
+  tag.title = numberDisplay(n);
   tag.style.setProperty("--num-color", numberColor(n.id));
   return tag;
 }
@@ -242,7 +446,7 @@ function formatDuration(seconds) {
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   if (h) return h + "h " + m + "m";
-  if (m) return m + "m " + (s ? s + "s" : "");
+  if (m) return m + "m" + (s ? " " + s + "s" : "");
   return s + "s";
 }
 
@@ -288,14 +492,49 @@ function validatePhone(code, digits) {
 
 // ---------- Page guards ----------
 // Opening a web/ or mobile/ page makes that the remembered view.
-// App pages (data-nav) need a signed-in user; message pages (data-needs-phone) need at least one linked number.
+// App pages (data-nav) need a signed-in user. Once signed in, everything is open straight away.
 
 if (document.body.dataset.view) setView(document.body.dataset.view);
 
 if (document.body.dataset.nav && !getUser()) {
-  location.replace(ROOT + "login.html");
-} else if ("needsPhone" in document.body.dataset && getNumbers().length === 0) {
-  location.replace(ROOT + "connect.html");
+  location.replace(loginUrl());
+}
+
+if (document.body.dataset.nav) {
+  // Back/forward can show a cached page: check the session again when it comes back
+  window.addEventListener("pageshow", () => {
+    if (!getUser()) location.replace(loginUrl());
+  });
+  // Logging out (or the session ending) in another tab closes this one too
+  window.addEventListener("storage", (e) => {
+    if (e.key === USER_KEY && !getUser()) location.replace(loginUrl());
+  });
+  // A session that runs out while the page is open
+  setInterval(() => {
+    if (!getUser()) location.replace(loginUrl());
+  }, 60 * 1000);
+}
+
+// The account's phone comes from its mobile number: SIM 1 is the number used to sign up.
+// (The demo admin account gets a dual SIM phone so both SIMs can be tried.)
+function ensurePhone(user) {
+  if (!user || getPhone()) return;
+  const now = new Date().toISOString();
+  const sims = user.number
+    ? [{ country: user.country, number: user.number, label: "Personal" }]
+    : [{ country: "+91", number: "9876543210", label: "Personal" }, { country: "+91", number: "9123400001", label: "Work" }];
+  saveAccount({
+    seq: sims.length,
+    devices: [{ id: "d1", name: "My phone", type: "android", addedAt: now }],
+    numbers: sims.map((s, i) => ({ id: "n" + (i + 1), deviceId: "d1", slot: i + 1, country: s.country, number: s.number, label: s.label, verifiedAt: now }))
+  });
+}
+ensurePhone(getUser());
+
+// Where to go after signing in or creating an account
+function afterLoginUrl() {
+  ensurePhone(getUser());
+  return appUrl("dashboard.html");
 }
 
 // ---------- Display ----------
@@ -396,6 +635,7 @@ const ICONS = {
   callOut: svg('<path d="M7 17 17 7"/><path d="M9 7h8v8"/>', 2.4),
   callMissed: svg('<path d="m4 7 6 6 4-4 6 6"/><path d="M20 10v5h-5"/>', 2.4),
   callRejected: svg('<circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/>', 2.2),
+  download: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>'),
   clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   phone: svg('<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>'),
   devices: svg('<rect x="3" y="4" width="11" height="17" rx="2"/><path d="M8 17h1"/><rect x="15" y="8" width="6" height="13" rx="1.5"/>'),
@@ -429,7 +669,7 @@ const NAV_SECTIONS = [
   {
     title: "Manage",
     items: [
-      { nav: "devices", href: "devices.html", label: "Phones & numbers", icon: "devices" },
+      { nav: "devices", href: "devices.html", label: "My phone", icon: "phone" },
       { nav: "users", href: "users.html", label: "Users", icon: "users" }
     ]
   }
@@ -447,29 +687,25 @@ function otherViewUrl() {
   return ROOT + other + "/" + location.pathname.split("/").pop() + location.search;
 }
 
-// "Viewing" switcher: All numbers, or one number grouped by phone
+// SIM switcher: both SIMs together, or one SIM at a time
 function buildNumberSelect(select) {
-  const numbers = getNumbers();
+  const numbers = readableNumbers();
   const selected = getSelectedNumberId();
   select.innerHTML = "";
 
   const all = document.createElement("option");
   all.value = "all";
-  all.textContent = numbers.length === 1 ? numberDisplay(numbers[0]) : "All numbers (" + numbers.length + ")";
+  all.textContent = numbers.length === 0 ? "Phone not set up"
+    : numbers.length === 1 ? numberDisplay(numbers[0]) : "Both SIMs";
   select.appendChild(all);
 
   if (numbers.length > 1) {
-    for (const device of getDevices()) {
-      const group = document.createElement("optgroup");
-      group.label = device.name;
-      numbers.filter((n) => n.deviceId === device.id).forEach((n) => {
-        const opt = document.createElement("option");
-        opt.value = n.id;
-        opt.textContent = numberDisplay(n) + " · " + n.label;
-        group.appendChild(opt);
-      });
-      if (group.children.length) select.appendChild(group);
-    }
+    numbers.forEach((n) => {
+      const opt = document.createElement("option");
+      opt.value = n.id;
+      opt.textContent = "SIM " + n.slot + " · " + n.label + " (" + numberDisplay(n) + ")";
+      select.appendChild(opt);
+    });
   }
 
   select.value = selected;
@@ -481,19 +717,20 @@ function buildNumberSelect(select) {
 }
 
 function selectedNumberCaption() {
-  const numbers = getNumbers();
+  const numbers = readableNumbers();
   const selected = numberById(getSelectedNumberId());
-  if (selected) return selected.label + " · SIM " + selected.slot;
-  if (numbers.length === 1) return numbers[0].label + " · SIM " + numbers[0].slot;
-  return "Viewing all numbers";
+  if (selected) return "SIM " + selected.slot + " · " + selected.label;
+  if (numbers.length === 1) return "SIM 1 · " + numbers[0].label;
+  if (numbers.length === 0) return getView() === "mobile" ? "Set up this phone" : "Install the app";
+  return "Viewing both SIMs";
 }
 
 function fillLinkedNumberText() {
-  const numbers = getNumbers();
+  const numbers = readableNumbers();
   const selected = numberById(getSelectedNumberId());
   const text = selected
     ? numberDisplay(selected)
-    : numbers.length === 1 ? numberDisplay(numbers[0]) : "all " + numbers.length + " numbers";
+    : numbers.length === 1 ? numberDisplay(numbers[0]) : "both SIMs";
   document.querySelectorAll("[data-linked-number]").forEach((el) => { el.textContent = text; });
 }
 
@@ -514,7 +751,7 @@ function renderSidebar() {
   sidebar.innerHTML =
     '<a class="brand" href="dashboard.html"><span class="brand-logo">' + ICONS.logo + '</span><span class="brand-name">SMS Reader</span></a>' +
     '<div class="number-switch">' +
-      '<a class="phone-chip-icon" href="devices.html" title="Phones & numbers">' + ICONS.phone + "</a>" +
+      '<a class="phone-chip-icon" href="devices.html" title="My phone">' + ICONS.phone + "</a>" +
       '<label class="number-switch-text"><small id="ns-caption"></small><select id="number-select" aria-label="Number to view"></select></label>' +
     "</div>" +
     NAV_SECTIONS.map((section) =>

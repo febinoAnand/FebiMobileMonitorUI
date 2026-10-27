@@ -1,4 +1,5 @@
-// Login page (UI only). Accepts the demo account admin / admin.
+// Login page (UI only). Accepts the demo account admin / admin, or an account made on the sign-up page
+// (username, email or mobile number + password).
 // This check runs in the browser and is NOT secure — replace it with a call to the
 // backend login API before going live.
 
@@ -6,14 +7,25 @@ const DEMO_USERNAME = "admin";
 const DEMO_PASSWORD = "admin";
 
 (function () {
-  // Signed in already: go on to the app in the chosen view, or to adding a phone first
-  const nextPage = () => (getNumbers().length ? appUrl("dashboard.html") : "connect.html");
+  // The view is asked first on the shared index page; each view has its own login and sign-up page
+  if (!hasChosenView()) {
+    location.replace(ROOT + "index.html");
+    return;
+  }
+  if (document.body.dataset.loginView !== getView()) {
+    location.replace(appUrl(location.pathname.split("/").pop()));
+    return;
+  }
+
+  // Signed in already: go on to the app in the chosen view, or to setting up a phone first
+  const nextPage = afterLoginUrl;
 
   if (getUser()) {
     location.replace(nextPage());
     return;
   }
 
+  // The view chosen on the first page; "Change" goes back there
   $("view-chip-text").textContent = getView() === "mobile" ? "Mobile view" : "Web view";
 
   const form = $("login-form");
@@ -65,9 +77,29 @@ const DEMO_PASSWORD = "admin";
         return;
       }
 
+      // Accounts made on the sign-up page: username, email or mobile number + password
+      const account = findAccount(usernameValue);
+      if (account && account.password === password.value) {
+        saveUser({ name: account.name, username: account.username, email: account.email, country: account.country, number: account.number }, $("remember").checked);
+        location.href = nextPage();
+        return;
+      }
+
       btn.disabled = false;
       btn.textContent = "Sign in";
-      setError("field-password", password, "password-error", "Incorrect username or password");
+
+      // No account with that username / email / number: offer to create one
+      if (!account && usernameValue.toLowerCase() !== DEMO_USERNAME) {
+        setError("field-username", username, "username-error", "");
+        $("field-username").classList.add("invalid");
+        $("username-error").innerHTML = 'No account found. Don\'t have one? <a class="link" href="register.html">Create an account</a>';
+        $("no-account").hidden = false;
+        $("switch-auth").hidden = true;
+        username.focus();
+        return;
+      }
+
+      setError("field-password", password, "password-error", "Incorrect password");
       password.value = "";
       password.focus();
     }, 600);

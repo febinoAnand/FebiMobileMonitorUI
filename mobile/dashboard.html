@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- Signed-out visitors go to the login page before anything is shown -->
+  <script>(function () { var ok = false; try { var u = JSON.parse(localStorage.getItem("smsReader.user") || sessionStorage.getItem("smsReader.user")); ok = !!(u && u.expiresAt && Date.now() < u.expiresAt); } catch (e) {} if (!ok) { document.documentElement.style.visibility = "hidden"; location.replace("login.html"); } })();</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#6366f1">
   <title>Dashboard · SMS Reader</title>
   <link rel="stylesheet" href="../css/styles.css">
 </head>
-<body class="m-view" data-view="mobile" data-root="../" data-nav="dashboard" data-needs-phone>
+<body class="m-view" data-view="mobile" data-root="../" data-nav="dashboard">
   <div class="m-phone">
     <div class="m-app">
       <header class="m-topbar" id="m-topbar"></header>
@@ -60,7 +62,7 @@
         
         <section class="panel">
           <div class="panel-header">
-            <h2>Your numbers</h2>
+            <h2>SIM cards</h2>
             <a class="panel-link" href="devices.html">Manage →</a>
           </div>
           <ul class="number-list" id="number-list"></ul>

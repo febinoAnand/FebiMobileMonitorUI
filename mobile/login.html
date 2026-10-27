@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Sign in · SMS Reader</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="m-view" data-login-view="mobile" data-root="../">
+  <main class="auth">
+    <div class="auth-card">
+
+      <section class="auth-brand">
+        <div class="brand">
+          <span class="brand-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>
+          </span>
+          <span class="brand-name">SMS Reader</span>
+        </div>
+
+        <div class="auth-hero">
+          <h2>Every message,<br>in one place.</h2>
+          <p>Read your SMS, see who sent them and when, and keep your contacts close, from any device.</p>
+        </div>
+
+        <div class="bubble-stack" aria-hidden="true">
+          <div class="float-bubble in">Your OTP is 482913 🔐</div>
+          <div class="float-bubble out">Meeting at 11 AM ✓</div>
+          <div class="float-bubble in">Rs.50,000 credited 💸</div>
+        </div>
+      </section>
+
+      <section class="auth-form-wrap">
+        <div class="auth-mobile-brand">
+          <span class="brand-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>
+          </span>
+          <span class="brand-name">SMS Reader</span>
+        </div>
+        <a class="view-chip" href="../index.html" id="view-chip"><span id="view-chip-text">Web view</span><b>Change</b></a>
+        <h1>Welcome back 👋</h1>
+        <p class="auth-sub">Sign in to read your messages</p>
+
+        <form id="login-form" novalidate>
+          <div class="field" id="field-username">
+            <label for="username">Username, email or mobile number</label>
+            <input id="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Enter your username">
+            <small class="field-error" id="username-error"></small>
+          </div>
+
+          <div class="field" id="field-password">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <input id="password" type="password" autocomplete="current-password" placeholder="Enter your password">
+              <button type="button" class="toggle-pw" id="toggle-pw" aria-label="Show password">Show</button>
+            </div>
+            <small class="field-error" id="password-error"></small>
+          </div>
+
+          <div class="form-row">
+            <label class="check"><input type="checkbox" id="remember"> Remember me <small class="check-hint">for 30 days</small></label>
+            <button type="button" class="link link-btn" id="forgot">Forgot password?</button>
+          </div>
+
+          <button type="submit" class="btn-primary" id="submit-btn">Sign in</button>
+        </form>
+
+        <div class="no-account" id="no-account" hidden>
+          <strong>Don't have an account?</strong>
+          <span>Create one with your email and mobile number, then set your username and password.</span>
+          <a class="btn" href="register.html">Create an account</a>
+        </div>
+        <p class="switch-auth" id="switch-auth">Don't have an account? <a class="link" href="register.html">Create an account</a></p>
+        <p class="form-note" id="form-note">Demo login: username <strong>admin</strong>, password <strong>admin</strong></p>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/common.js"></script>
+  <script src="../js/login.js"></script>
+</body>
+</html>

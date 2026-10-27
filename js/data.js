@@ -1,10 +1,10 @@
 // Sample data for the UI only.
 // When the backend is ready, replace this with API calls that return the same shapes.
 //
-// One login (account) can link several phones, and each phone can hold two SIMs.
-// Every message and call belongs to one of the account's numbers (numberId).
-// Linked numbers are created on the "Add a phone" page and get ids n1, n2, n3… in order,
-// so the sample messages below show up on the 1st, 2nd and 3rd number you link.
+// One login = one phone, which holds SIM 1 and (if dual SIM) SIM 2.
+// Every message and call belongs to one of the phone's SIMs (numberId).
+// SIMs are created on the phone set-up page and get ids n1, n2… in order,
+// so the sample messages below show up on the 1st and 2nd SIM you add.
 //
 // contact:  { id, name, phone, email, address, company, label, notes }
 // message:  { id, contactId, numberId, direction: "in" | "out", text, time (ISO string), read }
@@ -12,7 +12,7 @@
 
 // user: { id, name, username, email, role: "Admin" | "Editor" | "Viewer", active, lastLogin (ISO string or null),
 //         phoneCountry, phoneNumber (digits only, "" if none), phoneVerified }
-// The signed-in user's own numbers come from their linked phones (getNumbers() in common.js).
+// The signed-in user's own numbers are the SIMs of their phone (getNumbers() in common.js).
 const USERS = [
   { id: "u1", name: "Admin", username: "admin", email: "admin@smsreader.com", role: "Admin", active: true, lastLogin: "2026-10-26T09:30:00", phoneCountry: "+91", phoneNumber: "", phoneVerified: false },
   { id: "u2", name: "Priya Sharma", username: "priya", email: "priya.sharma@example.com", role: "Editor", active: true, lastLogin: "2026-10-25T17:12:00", phoneCountry: "+91", phoneNumber: "9845012345", phoneVerified: true },
@@ -112,24 +112,43 @@ const MESSAGES = [
   { id: "m20", contactId: "c4", numberId: "n1", direction: "in",  text: "Coming home this weekend?", time: "2026-10-22T19:10:00", read: true },
   { id: "m21", contactId: "c4", numberId: "n1", direction: "out", text: "Yes, reaching Saturday evening.", time: "2026-10-22T19:25:00", read: true },
 
-  { id: "m22", contactId: "c6", numberId: "n3", direction: "in",  text: "Thanks for the quick delivery last week. The team loved it.", time: "2026-10-24T16:40:00", read: true },
-  { id: "m23", contactId: "c6", numberId: "n3", direction: "in",  text: "Good morning! Can you share the quotation for the next order by noon?", time: "2026-10-26T10:05:00", read: false },
-  { id: "m24", contactId: "c6", numberId: "n3", direction: "out", text: "Sure Arjun, sending it within the hour.", time: "2026-10-26T10:12:00", read: true }
+  { id: "m22", contactId: "c6", numberId: "n2", direction: "in",  text: "Thanks for the quick delivery last week. The team loved it.", time: "2026-10-24T16:40:00", read: true },
+  { id: "m23", contactId: "c6", numberId: "n2", direction: "in",  text: "Good morning! Can you share the quotation for the next order by noon?", time: "2026-10-26T10:05:00", read: false },
+  { id: "m24", contactId: "c6", numberId: "n2", direction: "out", text: "Sure Arjun, sending it within the hour.", time: "2026-10-26T10:12:00", read: true }
 ];
 
 const CALLS = [
   { id: "k1",  contactId: "c4", numberId: "n1", type: "incoming", time: "2026-10-26T08:15:00", duration: 420 },
   { id: "k2",  contactId: "c1", numberId: "n2", type: "outgoing", time: "2026-10-26T09:05:00", duration: 312 },
-  { id: "k3",  contactId: "c6", numberId: "n3", type: "incoming", time: "2026-10-26T10:30:00", duration: 905 },
+  { id: "k3",  contactId: "c6", numberId: "n2", type: "incoming", time: "2026-10-26T10:30:00", duration: 905 },
   { id: "k4",  contactId: "c5", numberId: "n2", type: "missed",   time: "2026-10-26T11:50:00", duration: 0 },
   { id: "k5",  contactId: "c4", numberId: "n1", type: "missed",   time: "2026-10-25T13:02:00", duration: 0 },
-  { id: "k6",  contactId: "c6", numberId: "n3", type: "outgoing", time: "2026-10-25T15:00:00", duration: 240 },
+  { id: "k6",  contactId: "c6", numberId: "n2", type: "outgoing", time: "2026-10-25T15:00:00", duration: 240 },
   { id: "k7",  contactId: "c2", numberId: "n1", type: "incoming", time: "2026-10-25T18:05:00", duration: 95 },
   { id: "k8",  contactId: "c1", numberId: "n2", type: "missed",   time: "2026-10-25T18:40:00", duration: 0 },
   { id: "k9",  contactId: "c1", numberId: "n2", type: "incoming", time: "2026-10-24T09:20:00", duration: 645 },
-  { id: "k10", contactId: "c6", numberId: "n3", type: "missed",   time: "2026-10-24T12:00:00", duration: 0 },
+  { id: "k10", contactId: "c6", numberId: "n2", type: "missed",   time: "2026-10-24T12:00:00", duration: 0 },
   { id: "k11", contactId: "c5", numberId: "n2", type: "rejected", time: "2026-10-24T16:22:00", duration: 0 },
   { id: "k12", contactId: "c4", numberId: "n1", type: "outgoing", time: "2026-10-23T20:30:00", duration: 1260 },
   { id: "k13", contactId: "c2", numberId: "n1", type: "rejected", time: "2026-10-22T10:10:00", duration: 0 },
   { id: "k14", contactId: "c2", numberId: "n1", type: "outgoing", time: "2026-10-21T21:40:00", duration: 180 }
 ];
+
+// The sample times above are written as if "today" were 26 Oct 2026.
+// Move them by the days since then so the demo always shows recent activity.
+(function keepSampleDatesRecent() {
+  const base = new Date(2026, 9, 26);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((today - base) / 86400000);
+  if (!days) return;
+  const pad = (n) => String(n).padStart(2, "0");
+  const shift = (iso) => {
+    const d = new Date(iso);
+    d.setDate(d.getDate() + days);
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":00";
+  };
+  MESSAGES.forEach((m) => { m.time = shift(m.time); });
+  CALLS.forEach((c) => { c.time = shift(c.time); });
+  USERS.forEach((u) => { if (u.lastLogin) u.lastLogin = shift(u.lastLogin); });
+})();
