@@ -3496,3 +3496,45 @@ button.sim-add { text-align: left; color: var(--accent); font-weight: 700; font-
 @media (max-width: 380px) { .view-option-badge { display: none; } }
 
 .check-hint { color: var(--muted); font-size: 0.74rem; }
+
+.role-user { color: #0891b2; background: rgba(6, 182, 212, 0.13); }
+@media (prefers-color-scheme: dark) { .role-user { color: var(--accent-3); } }
+
+/* =====================================================================
+   Profile
+   ===================================================================== */
+.profile-wrap { display: flex; flex-direction: column; gap: 16px; padding: 0 20px 24px; }
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+.profile-card .avatar-lg { width: 76px; height: 76px; border-radius: 24px; font-size: 1.7rem; margin: 0; }
+.profile-card .avatar-lg::before { display: none; }
+.profile-id { flex: 1; min-width: 180px; }
+.profile-id h2 { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
+.profile-id p { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; color: var(--muted); font-size: 0.88rem; }
+.profile-id small { display: block; margin-top: 4px; color: var(--muted); font-size: 0.78rem; }
+.profile-phone { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 16px; background: var(--accent-soft); }
+.profile-phone small { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.profile-phone strong { font-variant-numeric: tabular-nums; }
+.profile-phone .link { font-size: 0.8rem; }
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; align-items: start; }
+.profile-form { display: flex; flex-direction: column; gap: 4px; }
+.profile-form h3 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 1.02rem; font-weight: 700; }
+.profile-form .btn { align-self: flex-start; margin-top: 6px; }
+.toggle-pw-inline { font-size: 0.8rem; }
+.profile-wrap .info-note, .m-view .profile-card + .info-note { margin: 0; }
+.m-view .profile-wrap { padding: 0; }
+.m-view .profile-card { padding: 16px; }
+.m-view .profile-form .btn { align-self: stretch; }
+@media (max-width: 700px) {
+  .profile-wrap { padding: 0 16px 20px; }
+  .profile-form .btn { align-self: stretch; }
+}

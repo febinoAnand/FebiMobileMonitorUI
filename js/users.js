@@ -1,37 +1,23 @@
-// Users page: list, filter, add, edit and delete app users, including their mobile numbers.
-// Changes are kept in the browser until the backend exists.
+// Users page (admins only): every account in the user directory — add, edit, reset password,
+// activate / deactivate and delete. Everyone else manages their own account on the Profile page.
 
 (function () {
-  const USERS_KEY = "smsReader.users.v2";
-  const ROLES = ["All", "Admin", "Editor", "Viewer"];
+  if (!isAdmin()) {
+    location.replace("profile.html");
+    return;
+  }
 
-  let users = loadUsers();
+  const ROLES = ["All", "Admin", "User"];
+
   let roleFilter = "All";
   let query = "";
   let editingId = null;
   let deletingId = null;
 
   const me = (getUser() || {}).username;
+  const users = () => getAccounts();
 
-  function loadUsers() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(USERS_KEY));
-      if (Array.isArray(saved)) return saved;
-    } catch {
-      // fall through to sample data
-    }
-    return USERS.map((u) => ({ ...u }));
-  }
-
-  function storeUsers() {
-    try {
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    } catch {
-      // storage unavailable — changes last until the page is closed
-    }
-  }
-
-  // The signed-in user's numbers are the SIMs in their phone (SIM 1 shown, "+1" when there is a SIM 2)
+  // The signed-in admin's numbers are the SIMs in their phone (SIM 1 shown, "+1" when there is a SIM 2)
   function phoneOf(u) {
     if (u.username === me) {
       const linked = getNumbers();
@@ -39,8 +25,8 @@
       const extra = linked.length - 1;
       return { country: linked[0].country, number: linked[0].number, display: numberDisplay(linked[0]) + (extra ? " +" + extra : ""), verified: true };
     }
-    if (!u.phoneNumber) return null;
-    return { country: u.phoneCountry, number: u.phoneNumber, display: formatPhone(u.phoneCountry, u.phoneNumber), verified: !!u.phoneVerified };
+    if (!u.number) return null;
+    return { country: u.country, number: u.number, display: formatPhone(u.country, u.number), verified: !!u.phoneVerified };
   }
 
   // ---------- List ----------
@@ -49,7 +35,7 @@
     const box = $("role-filter");
     box.innerHTML = "";
     for (const role of ROLES) {
-      const count = role === "All" ? users.length : users.filter((u) => u.role === role).length;
+      const count = role === "All" ? users().length : users().filter((u) => u.role === role).length;
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "chip" + (role === roleFilter ? " active" : "");
@@ -75,10 +61,10 @@
 
   function renderRows() {
     const q = query.toLowerCase();
-    const visible = users
+    const visible = users()
       .filter((u) => roleFilter === "All" || u.role === roleFilter)
       .filter((u) => matches(u, q))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => (b.role === "Admin") - (a.role === "Admin") || a.name.localeCompare(b.name));
 
     const tbody = $("user-rows");
     tbody.innerHTML = "";
@@ -116,24 +102,23 @@
 
       // Mobile number + verification state
       const phone = phoneOf(u);
-      const phoneCell = tr.querySelector(".phone-cell");
       const wrap = document.createElement("div");
       wrap.className = "phone-wrap";
       const num = document.createElement("span");
       num.className = "phone-num";
-      const badge = document.createElement("span");
+      wrap.append(num);
       if (phone) {
         num.textContent = phone.display;
+        const badge = document.createElement("span");
         badge.className = "verify-badge " + (phone.verified ? "ok" : "pending");
         badge.textContent = phone.verified ? "✓ Verified" : "⏳ Pending";
         badge.title = phone.verified ? "Verified with a one-time code" : "Waiting for the user to verify with a one-time code";
+        wrap.append(badge);
       } else {
         num.textContent = "Not linked";
         num.classList.add("none");
       }
-      wrap.append(num);
-      if (phone) wrap.append(badge);
-      phoneCell.appendChild(wrap);
+      tr.querySelector(".phone-cell").appendChild(wrap);
 
       const role = tr.querySelector(".role");
       role.textContent = u.role;
@@ -163,9 +148,10 @@
   }
 
   function render() {
-    const active = users.filter((u) => u.active).length;
-    const verified = users.filter((u) => (phoneOf(u) || {}).verified).length;
-    $("user-summary").textContent = users.length + " users · " + active + " active · " + verified + " verified numbers";
+    const list = users();
+    const active = list.filter((u) => u.active).length;
+    const admins = list.filter((u) => u.role === "Admin").length;
+    $("user-summary").textContent = list.length + " users · " + active + " active · " + admins + (admins === 1 ? " admin" : " admins");
     renderFilters();
     renderRows();
   }
@@ -205,13 +191,14 @@
 
   function openUserModal(id) {
     editingId = id || null;
-    const u = users.find((x) => x.id === id);
+    const u = users().find((x) => x.id === id);
     const isMe = !!(u && u.username === me);
     const phone = u ? phoneOf(u) : null;
 
     $("user-modal-title").textContent = u ? "Edit user" : "Add user";
-    $("user-modal-sub").textContent = u ? "Update details for " + u.name + "." : "Give someone access to SMS Reader.";
+    $("user-modal-sub").textContent = u ? "Update details for " + u.name + "." : "They can sign in with this username and password.";
     $("user-save-btn").textContent = u ? "Save changes" : "Add user";
+    $("u-password-label").textContent = u ? "Reset password" : "Password";
 
     fields.name.value = u ? u.name : "";
     fields.username.value = u ? u.username : "";
@@ -219,15 +206,19 @@
     fields.country.value = phone ? phone.country : "+91";
     fields.phone.value = phone ? phone.number : "";
     fields.password.value = "";
-    fields.password.placeholder = u ? "Leave blank to keep current password" : "At least 4 characters";
-    fields.role.value = u ? u.role : "Viewer";
+    fields.password.placeholder = u ? "Leave blank to keep their password" : "At least 6 characters";
+    fields.role.value = u ? u.role : "User";
     fields.active.checked = u ? u.active : true;
 
-    // You can't lock yourself out, and your own number changes only through OTP verification
+    // You can't lock yourself out; your own password and number are changed on Profile / My phone
     fields.role.disabled = isMe;
     fields.active.disabled = isMe;
     fields.country.disabled = isMe;
     fields.phone.disabled = isMe;
+    fields.password.disabled = isMe;
+    $("u-password-hint").innerHTML = isMe
+      ? 'Change your own password on your <a class="link" href="profile.html">Profile</a>.'
+      : u ? "Type a new password to reset it. They'll use it next time they sign in." : "";
     const hint = $("u-phone-hint");
     if (isMe) {
       hint.innerHTML = 'Your numbers are the SIMs in your phone. <a class="link" href="devices.html">Manage my phone →</a>';
@@ -242,20 +233,16 @@
     fields.name.focus();
   }
 
-  // Is this number already used by someone else (including the signed-in user's linked number)?
+  // Is this number already used by someone else (including the signed-in admin's SIMs)?
   function numberTaken(country, number) {
     if (getNumbers().some((n) => n.country === country && n.number === number)) return true;
-    return users.some((u) => {
-      if (u.id === editingId) return false;
-      const p = phoneOf(u);
-      return p && p.country === country && p.number === number;
-    });
+    return users().some((u) => u.id !== editingId && u.country === country && u.number === number);
   }
 
   $("user-form").addEventListener("submit", (e) => {
     e.preventDefault();
 
-    const editing = users.find((u) => u.id === editingId);
+    const editing = users().find((u) => u.id === editingId);
     const isMe = !!(editing && editing.username === me);
 
     const name = fields.name.value.trim();
@@ -266,18 +253,13 @@
     const password = fields.password.value;
 
     const nameMsg = name ? "" : "Please enter a name";
-    const usernameMsg = !username
-      ? "Please enter a username"
-      : !/^[a-z0-9._-]{3,}$/.test(username)
-        ? "3+ characters: letters, numbers, . _ -"
-        : users.some((u) => u.username === username && u.id !== editingId) ? "This username is taken" : "";
+    const usernameMsg = usernameError(username, editingId);
     const phoneMsg = isMe || !phoneDigits
       ? ""
       : validatePhone(country, phoneDigits) || (numberTaken(country, phoneDigits) ? "This number belongs to another user" : "");
-    const emailMsg = email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "Please enter a valid email" : "";
-    const passwordMsg = !editingId && password.length < 4
-      ? "Password must be at least 4 characters"
-      : editingId && password && password.length < 4 ? "Password must be at least 4 characters" : "";
+    const emailMsg = email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "Please enter a valid email"
+      : email && users().some((u) => u.id !== editingId && (u.email || "").toLowerCase() === email.toLowerCase()) ? "Another user has this email" : "";
+    const passwordMsg = isMe ? "" : (!editingId || password) ? passwordError(password) : "";
 
     setFieldError("field-name", fields.name, "u-name-error", nameMsg);
     setFieldError("field-uname", fields.username, "u-username-error", usernameMsg);
@@ -294,29 +276,32 @@
       return;
     }
 
-    // Passwords are not stored here — the backend will handle them
-    const data = { name, username, email, role: fields.role.value, active: fields.active.checked };
-
+    const data = { name, username, email };
     if (!isMe) {
+      data.role = fields.role.value;
+      data.active = fields.active.checked;
       // A new or changed number has to be verified again by that user
-      const sameNumber = editing && editing.phoneCountry === country && editing.phoneNumber === phoneDigits;
-      data.phoneCountry = country;
-      data.phoneNumber = phoneDigits;
+      const sameNumber = editing && editing.country === country && editing.number === phoneDigits;
+      data.country = country;
+      data.number = phoneDigits;
       data.phoneVerified = sameNumber ? !!editing.phoneVerified : false;
+      if (password) data.password = password;
     }
 
     if (editing) {
-      const numberChanged = !isMe && phoneDigits && editing.phoneNumber !== phoneDigits;
-      Object.assign(editing, data);
-      showToast(numberChanged ? "Saved. " + name + " needs to verify the new number." : "Saved changes to " + name);
+      if (editing.username !== username) renameUserData(editing.username, username);
+      updateAccount(editing.id, data);
+      // Keep the admin's own session in step with a new name / username
+      if (isMe) saveUser({ ...getUser(), name, username, email }, !!readJSON(localStorage, USER_KEY));
+      showToast(password && !isMe ? "Saved. " + name + "'s password was reset." : "Saved changes to " + name);
     } else {
-      users.push({ id: "u" + Date.now(), lastLogin: null, ...data });
-      showToast(phoneDigits ? name + " was added. Their number is pending verification." : name + " was added");
+      saveAccounts([...users(), { id: "u" + Date.now(), createdAt: new Date().toISOString(), lastLogin: null, ...data }]);
+      showToast(name + " was added. They can sign in as @" + username + ".");
     }
 
-    storeUsers();
     modal.close();
     render();
+    if (isMe) location.reload();
   });
 
   // ---------- Delete ----------
@@ -324,17 +309,17 @@
   const deleteModal = $("delete-modal");
 
   function openDeleteModal(id) {
-    const u = users.find((x) => x.id === id);
+    const u = users().find((x) => x.id === id);
     if (!u || u.username === me) return;
     deletingId = id;
-    $("delete-text").textContent = u.name + " (@" + u.username + ") will no longer be able to sign in. This can't be undone.";
+    $("delete-text").textContent = u.name + " (@" + u.username + ") will be signed out and can no longer sign in. This can't be undone.";
     openDialog(deleteModal);
   }
 
   $("delete-confirm-btn").addEventListener("click", () => {
-    const u = users.find((x) => x.id === deletingId);
-    users = users.filter((x) => x.id !== deletingId);
-    storeUsers();
+    const u = users().find((x) => x.id === deletingId);
+    saveAccounts(users().filter((x) => x.id !== deletingId));
+    if (u) removeUserData(u.username);
     deleteModal.close();
     render();
     if (u) showToast(u.name + " was deleted");

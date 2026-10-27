@@ -139,11 +139,8 @@
     const password = $("reg-password").value;
     const confirm = $("reg-confirm").value;
 
-    const usernameMsg = !username
-      ? "Please choose a username"
-      : !/^[a-z0-9._-]{3,}$/.test(username) ? "3+ characters: letters, numbers, . _ -"
-      : username === "admin" || findAccount(username) ? "This username is taken" : "";
-    const passwordMsg = password.length < 6 ? "Password must be at least 6 characters" : "";
+    const usernameMsg = usernameError(username, null);
+    const passwordMsg = passwordError(password);
     const confirmMsg = !passwordMsg && confirm !== password ? "Passwords don't match" : "";
 
     setError("field-reg-username", "reg-username-error", usernameMsg);
@@ -154,7 +151,9 @@
     if (confirmMsg) return $("reg-confirm").focus();
 
     const name = username.split(/[._-]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
-    saveAccounts([...getAccounts(), { name, username, password, email: details.email, country: details.country, number: details.number, createdAt: new Date().toISOString() }]);
+    const now = new Date().toISOString();
+    saveAccounts([...getAccounts(), { id: "u" + Date.now(), name, username, password, email: details.email, country: details.country, number: details.number,
+      phoneVerified: true, role: "User", active: true, createdAt: now, lastLogin: now }]);
     saveUser({ name, username, email: details.email, country: details.country, number: details.number }, false);
 
     const btn = $("reg-create-btn");
