@@ -92,8 +92,8 @@
       : "Add a SIM 2 number if your phone is dual SIM.";
     const statGrid = stats.querySelector(".sim-activity-grid");
     for (const n of sims) {
-      const msgs = MESSAGES.filter((m) => m.numberId === n.id);
-      const calls = CALLS.filter((c) => c.numberId === n.id);
+      const msgs = messagesOf(myUsername(), [n.id]);
+      const calls = callsOf(myUsername(), [n.id]);
       const col = document.createElement("div");
       col.className = "sim-activity-col";
       col.style.setProperty("--num-color", numberColor(n.id));

@@ -101,6 +101,46 @@
     showToast("Password changed ✓");
   });
 
+  // ---------- Delete my account ----------
+
+  const deleteModal = $("delete-account-modal");
+  const onlyAdmin = () => isAdmin() && getAccounts().filter((x) => x.role === "Admin" && x.active).length < 2;
+
+  $("delete-account-btn").addEventListener("click", () => {
+    if (onlyAdmin()) {
+      showToast("You're the only admin. Make someone else an admin first.");
+      return;
+    }
+    $("delete-account-form").reset();
+    setError("field-del-password", "del-password-error", "");
+    setError("field-del-confirm", "del-confirm-error", "");
+    openDialog(deleteModal);
+    $("del-password").focus();
+  });
+
+  $("delete-account-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const a = currentAccount();
+    const passwordMsg = $("del-password").value !== a.password ? "That isn't your password" : "";
+    const confirmMsg = $("del-confirm").value.trim().toUpperCase() !== "DELETE" ? "Type DELETE to confirm" : "";
+    setError("field-del-password", "del-password-error", passwordMsg);
+    setError("field-del-confirm", "del-confirm-error", confirmMsg);
+    if (passwordMsg) return $("del-password").focus();
+    if (confirmMsg) return $("del-confirm").focus();
+
+    // Remove the account and everything stored for it, then sign out
+    saveAccounts(getAccounts().filter((x) => x.id !== a.id));
+    removeUserData(a.username);
+    for (const base of ["smsReader.placedCalls", "smsReader.location", "smsReader.find", "smsReader.viewUser"]) {
+      removeKey(localStorage, base + "." + a.username);
+    }
+    deleteModal.close();
+    $("delete-account-btn").disabled = true;
+    showToast("Your account was deleted");
+    setTimeout(logout, 1200);
+  });
+
+  wireDialogs();
   if (isAdmin()) $("admin-note").hidden = false;
   renderSummary();
 })();

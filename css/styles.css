@@ -3538,3 +3538,600 @@ button.sim-add { text-align: left; color: var(--accent); font-weight: 700; font-
   .profile-wrap { padding: 0 16px 20px; }
   .profile-form .btn { align-self: stretch; }
 }
+
+
+/* =====================================================================
+   Admin "View" switch, scope banner, owner tags
+   ===================================================================== */
+.user-switch { margin-top: -2px; background: rgba(236, 72, 153, 0.08); }
+.user-switch .phone-chip-icon { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
+.user-switch select, .m-sheet-view select {
+  width: 100%;
+  padding: 0 16px 0 0;
+  border: none;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M1 1.5l4 4 4-4'/%3E%3C/svg%3E") no-repeat right center;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+.user-switch option, .m-sheet-view option { background: var(--bg-1); color: var(--text); }
+@media (min-width: 701px) and (max-width: 1100px) {
+  .user-switch .number-switch-text { display: none; }
+}
+.m-sheet-view {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(236, 72, 153, 0.08);
+}
+.m-sheet-view svg { width: 20px; height: 20px; color: var(--accent-2); flex-shrink: 0; }
+.m-sheet-view select { font-size: 16px; }
+
+.scope-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  margin: 0 20px 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(236, 72, 153, 0.35);
+  border-radius: 14px;
+  background: rgba(236, 72, 153, 0.08);
+  font-size: 0.84rem;
+}
+.scope-banner > span { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.m-view .scope-banner { margin: 0; }
+.bar-header + .scope-banner { margin-top: 12px; }
+@media (max-width: 700px) { .scope-banner { margin: 0 16px 12px; } }
+
+.owner-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  max-width: 140px;
+  padding: 1px 8px 1px 2px;
+  border-radius: 999px;
+  background: rgba(236, 72, 153, 0.1);
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.owner-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+  font-size: 0.5rem;
+  font-weight: 800;
+}
+.item-top .owner-tag + .num-tag { margin-right: auto; }
+.item-top .owner-tag:not(:has(+ .num-tag)) { margin-right: auto; }
+
+/* =====================================================================
+   Type-ahead suggestions
+   ===================================================================== */
+.suggest {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: min(380px, 60vh);
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--glass-strong);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-lg);
+  animation: fade-up 0.18s var(--ease);
+}
+.suggest-group {
+  padding: 8px 10px 4px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.suggest-item:hover, .suggest-item.active { background: var(--accent-soft); }
+.suggest-item .avatar, .suggest-icon { width: 32px; height: 32px; border-radius: 10px; font-size: 0.72rem; flex-shrink: 0; }
+.suggest-icon { display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.suggest-icon svg { width: 16px; height: 16px; }
+.suggest-text { min-width: 0; display: flex; flex-direction: column; }
+.suggest-text strong { font-size: 0.88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggest-text small { font-size: 0.74rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggest mark { background: rgba(236, 72, 153, 0.22); color: inherit; border-radius: 3px; padding: 0 1px; font-weight: 800; }
+.suggest-empty { padding: 12px; color: var(--muted); font-size: 0.84rem; text-align: center; }
+.toolbar .search { z-index: 5; }
+.scope-banner small { color: var(--muted); font-size: 0.8rem; }
+.scope-banner small::before { content: "· "; }
+.m-view .scope-banner small::before { content: none; }
+.m-view .scope-banner > span { flex-direction: column; align-items: flex-start; gap: 2px; }
+
+/* =====================================================================
+   Find my phone
+   ===================================================================== */
+.loc-wrap { padding: 0 20px 24px; }
+.loc-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
+.loc-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+.loc-map-card {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-sm);
+}
+.loc-map-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.loc-map-head strong { display: block; font-size: 0.98rem; }
+.loc-map-head small { color: var(--muted); font-size: 0.78rem; }
+.loc-map-head .btn-icon svg { width: 16px; height: 16px; }
+.loc-map { height: clamp(320px, 62vh, 620px); background: var(--accent-soft); z-index: 0; }
+.loc-map-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 320px;
+  padding: 20px;
+  text-align: center;
+  background: var(--accent-soft);
+}
+.loc-map-fallback[hidden] { display: none; }
+.loc-map-fallback svg { width: 36px; height: 36px; color: var(--accent); }
+.loc-map-fallback small { color: var(--muted); }
+
+/* Leaflet in the app's colours */
+.leaflet-container { font: inherit; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--glass-strong); color: var(--text); box-shadow: var(--shadow-md); }
+.leaflet-bar a { background: var(--glass-strong); color: var(--text); border-color: var(--border); }
+.map-pin {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: var(--pin);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+.map-pin.live::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  border: 3px solid #10b981;
+  animation: map-pulse 1.8s ease-out infinite;
+}
+@keyframes map-pulse { from { transform: scale(0.7); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+
+.loc-place { display: flex; gap: 12px; align-items: flex-start; }
+.loc-pin {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+}
+.loc-pin svg { width: 22px; height: 22px; }
+.loc-place strong { display: block; font-size: 1.02rem; line-height: 1.3; }
+.loc-place small { color: var(--muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.loc-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.loc-facts > div { padding: 10px 12px; border-radius: 14px; background: var(--accent-soft); }
+.loc-facts dt { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.loc-facts dd { font-weight: 800; font-variant-numeric: tabular-nums; }
+.loc-facts dd.low { color: #e11d48; }
+.loc-source { margin: 10px 0 12px; font-size: 0.8rem; color: var(--muted); }
+.loc-off { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; margin-bottom: 10px; border-radius: 14px; background: rgba(245, 158, 11, 0.12); }
+.loc-off[hidden], #loc-details[hidden] { display: none; }
+.loc-off small { color: var(--muted); }
+.loc-status .switch small { display: block; }
+
+.loc-h3 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+.find-actions { display: flex; flex-direction: column; gap: 8px; }
+.find-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--glass-strong);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s var(--ease);
+}
+.find-action:hover { border-color: var(--accent); transform: translateY(-1px); }
+.find-action strong { display: block; font-size: 0.92rem; }
+.find-action small { color: var(--muted); font-size: 0.76rem; }
+.find-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+  background: var(--gradient);
+}
+.find-icon svg { width: 20px; height: 20px; }
+.find-action.on { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+.find-action.on .find-icon { background: linear-gradient(135deg, #10b981, #06b6d4); animation: ring-shake 0.5s ease-in-out infinite; }
+#act-lost.on { border-color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
+#act-lost.on .find-icon { background: linear-gradient(135deg, #f59e0b, #f97316); animation: none; }
+.find-action.danger .find-icon { background: linear-gradient(135deg, #e11d48, #f97316); }
+.find-action.danger:hover { border-color: #e11d48; }
+@keyframes ring-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+
+.find-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.1);
+  font-size: 0.84rem;
+}
+.find-status[hidden] { display: none; }
+.find-status.erased { border-color: rgba(225, 29, 72, 0.4); background: rgba(225, 29, 72, 0.08); }
+.lost-preview { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: #111827; color: #fff; }
+.lost-preview em { display: block; font-style: normal; font-weight: 600; }
+.lost-preview small { color: rgba(255, 255, 255, 0.7); }
+.lost-lock { font-size: 1.3rem; }
+.find-status .link-btn { align-self: flex-start; }
+
+.loc-range {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--glass-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+}
+.loc-history { list-style: none; display: flex; flex-direction: column; max-height: 360px; overflow-y: auto; }
+.loc-step { position: relative; display: flex; gap: 12px; padding: 8px 6px 8px 4px; border-radius: 12px; cursor: pointer; }
+.loc-step:hover, .loc-step:focus-visible { background: var(--accent-soft); outline: none; }
+.loc-step::before { content: ""; position: absolute; left: 10px; top: 24px; bottom: -8px; width: 2px; background: var(--border); }
+.loc-step:last-child::before { display: none; }
+.loc-dot { position: relative; z-index: 1; width: 14px; height: 14px; margin-top: 4px; border-radius: 50%; border: 3px solid var(--glass-strong); background: #6366f1; box-shadow: 0 0 0 1px var(--border); flex-shrink: 0; }
+.loc-step.latest .loc-dot { background: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25); }
+.loc-step strong { display: block; font-size: 0.86rem; font-weight: 600; }
+.loc-step small { color: var(--muted); font-size: 0.74rem; }
+
+.loc-people-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.loc-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--glass-strong);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.loc-person:hover { border-color: var(--accent); }
+.loc-person .avatar { width: 38px; height: 38px; border-radius: 12px; font-size: 0.8rem; }
+.loc-person-text { flex: 1; min-width: 0; }
+.loc-person-text strong { display: block; font-size: 0.88rem; }
+.loc-person-text small { display: block; color: var(--muted); font-size: 0.76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.loc-person-meta { flex-shrink: 0; font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+.loc-person.lost { border-color: rgba(245, 158, 11, 0.5); }
+.loc-layout > .loc-side[hidden] { display: none; }
+
+@media (max-width: 1100px) {
+  .loc-layout { grid-template-columns: minmax(0, 1fr); }
+  .loc-map-card { position: static; }
+  .loc-map { height: clamp(280px, 48vh, 460px); }
+}
+@media (max-width: 700px) {
+  .loc-wrap { padding: 0 16px 20px; }
+  .loc-map { height: 300px; }
+}
+.m-view .loc-layout { grid-template-columns: minmax(0, 1fr); }
+.m-view .loc-wrap { padding: 0; }
+.m-view .loc-map-card { position: static; }
+.m-view .loc-map { height: 280px; }
+@media (max-width: 380px) {
+  .loc-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .loc-map-head { flex-wrap: wrap; }
+}
+@media (prefers-color-scheme: dark) {
+  .leaflet-tile-pane { filter: brightness(0.75) contrast(1.1) saturate(0.85); }
+  .loc-facts dd.low { color: #fb7185; }
+}
+
+/* =====================================================================
+   Delete account
+   ===================================================================== */
+.danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  border-color: rgba(225, 29, 72, 0.35);
+  background: rgba(225, 29, 72, 0.05);
+}
+.danger-zone h3 { font-size: 1rem; font-weight: 700; color: #e11d48; }
+.danger-zone p { max-width: 520px; margin-top: 4px; color: var(--muted); font-size: 0.84rem; line-height: 1.5; }
+.m-view .danger-zone .btn { flex: 1; }
+@media (prefers-color-scheme: dark) { .danger-zone h3 { color: #fb7185; } }
+
+/* =====================================================================
+   Make a call (web dashboard) + call screen
+   ===================================================================== */
+.dialer-form { display: flex; gap: 10px; flex-wrap: wrap; }
+.dialer-form .dialer-search { flex: 1 1 260px; margin: 0; }
+.dialer-sim {
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  background: var(--glass-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+.dialer-call { min-height: 46px; padding: 0 22px; background: linear-gradient(135deg, #10b981, #06b6d4); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); }
+.dialer-call .btn-icon svg { width: 17px; height: 17px; }
+#dialer-error:empty { display: none; }
+.dialer-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.dialer-quick:empty { display: none; }
+.dialer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--glass-strong);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dialer-chip:hover { border-color: #10b981; background: rgba(16, 185, 129, 0.08); }
+.dialer-chip .avatar { width: 28px; height: 28px; border-radius: 50%; font-size: 0.64rem; }
+
+.call-screen {
+  width: min(380px, calc(100% - 32px));
+  margin: auto;
+  padding: 0;
+  border: none;
+  border-radius: 32px;
+  background: transparent;
+  color: #fff;
+  overflow: visible;
+}
+.call-screen::backdrop { background: rgba(15, 12, 40, 0.6); backdrop-filter: blur(6px); }
+.call-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 24px 26px;
+  border-radius: 32px;
+  background: linear-gradient(160deg, #1e1b4b, #4c1d95 60%, #831843);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: modal-in 0.35s var(--ease);
+}
+.call-via { font-size: 0.76rem; opacity: 0.75; }
+.call-avatar { margin: 14px 0 6px; }
+.call-avatar .avatar { width: 92px; height: 92px; border-radius: 50%; font-size: 2rem; box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12); }
+.call-screen:not(.connected) .call-avatar .avatar { animation: map-pulse-ring 1.6s ease-out infinite; }
+@keyframes map-pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35); } 100% { box-shadow: 0 0 0 22px rgba(255, 255, 255, 0); } }
+.call-who { font-size: 1.4rem; font-weight: 800; }
+.call-number { opacity: 0.8; font-size: 0.9rem; }
+.call-state { margin-top: 4px; font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.call-screen.connected .call-state { color: #6ee7b7; }
+.call-keys { min-height: 1.4em; font-size: 1.2rem; letter-spacing: 0.2em; }
+.call-keypad { display: grid; grid-template-columns: repeat(3, 56px); gap: 10px; margin: 4px 0 6px; }
+.call-keypad[hidden] { display: none; }
+.call-keypad button {
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: inherit;
+  font-size: 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.call-keypad button:active { background: rgba(255, 255, 255, 0.3); }
+.call-controls { display: flex; gap: 18px; margin: 14px 0 18px; }
+.call-ctl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  color: #fff;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.call-ctl span { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.14); transition: background 0.2s; }
+.call-ctl svg { width: 22px; height: 22px; }
+.call-ctl.on span { background: #fff; color: #4c1d95; }
+.call-end {
+  width: 66px;
+  height: 66px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #e11d48;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(225, 29, 72, 0.45);
+}
+.call-end svg { width: 28px; height: 28px; transform: rotate(135deg); }
+.call-end:hover { filter: brightness(1.1); }
+/* The call screen fits short windows: it scrolls, and the keypad shrinks */
+.call-screen { max-height: calc(100dvh - 24px); }
+.call-card { max-height: calc(100dvh - 24px); overflow-y: auto; padding-top: 22px; padding-bottom: 20px; }
+@media (max-height: 820px) {
+  .call-avatar { margin: 8px 0 2px; }
+  .call-avatar .avatar { width: 72px; height: 72px; font-size: 1.6rem; }
+  .call-keypad { grid-template-columns: repeat(3, 48px); gap: 8px; }
+  .call-keypad button { width: 48px; height: 48px; font-size: 1.1rem; }
+  .call-controls { margin: 10px 0 12px; }
+}
+
+/* =====================================================================
+   Dial pad (Make a call, web dashboard)
+   ===================================================================== */
+.dialer-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; }
+.dialer-main { min-width: 0; }
+.dialer-hint { margin-top: 10px; color: var(--muted); font-size: 0.8rem; }
+#dialer-input { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.02em; }
+.dialpad { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.dialpad-keys { display: grid; grid-template-columns: repeat(3, 64px); gap: 10px; }
+.dialpad-key {
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  background: var(--glass-strong);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
+}
+.dialpad-key strong { font-size: 1.45rem; font-weight: 600; line-height: 1.1; }
+.dialpad-key small { min-height: 0.8em; font-size: 0.56rem; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); }
+.dialpad-key:hover { border-color: var(--accent); background: var(--accent-soft); }
+.dialpad-key:active, .dialpad-key.pressed { transform: scale(0.94); background: var(--accent-soft); border-color: var(--accent); }
+.dialpad-actions { display: grid; grid-template-columns: repeat(3, 64px); gap: 10px; align-items: center; justify-items: center; }
+.dialpad-call {
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(16, 185, 129, 0.35);
+}
+.dialpad-call span { display: grid; }
+.dialpad-call svg { width: 26px; height: 26px; }
+.dialpad-call:active { transform: scale(0.95); }
+.dialpad-back {
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+.dialpad-back:hover { background: var(--accent-soft); color: var(--text); }
+
+@media (max-width: 900px) {
+  .dialer-body { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 380px) {
+  .dialpad-keys, .dialpad-actions { grid-template-columns: repeat(3, 56px); gap: 8px; }
+  .dialpad-key, .dialpad-call { width: 56px; height: 56px; }
+}
+
+/* Dial pad pop-up (Calls page) and its header button */
+.dialpad-open { background: linear-gradient(135deg, #10b981, #06b6d4); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3); }
+.dialpad-open .btn-icon svg { width: 18px; height: 18px; }
+.page-header .dialpad-open + .export-btn { margin-left: -2px; }
+.m-head .dialpad-open, .m-head .export-btn { width: 42px; height: 42px; padding: 0; border-radius: 14px; }
+.m-head .dialpad-open .btn-label { display: none; }
+.dialpad-modal { max-width: 360px; }
+.dialpad-modal .modal-card { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.dp-head { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.dp-head h2 { font-size: 1.15rem; }
+.dp-number {
+  width: 100%;
+  padding: 6px 4px;
+  border: none;
+  border-bottom: 2px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  outline: none;
+}
+.dp-number:focus { border-bottom-color: var(--accent); }
+.dp-number::placeholder { font-size: 1rem; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.dp-match { min-height: 1.2em; margin-top: -4px; color: #059669; font-size: 0.86rem; font-weight: 700; }
+.dp-sim { align-self: stretch; min-height: 40px; }
+.dp-error:empty { display: none; }
+.m-view .dialpad-modal .modal-card { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+@media (prefers-color-scheme: dark) { .dp-match { color: #34d399; } }

@@ -1,20 +1,27 @@
 // Messages page: conversations newest first, grouped by Today / Yesterday / This week / Earlier.
+// An admin viewing all users or another user sees those conversations, tagged with whose phone they're on.
 
 let inboxFilter = "all";
 
+// One thread per contact on each phone in view
 function buildThreads() {
-  return CONTACTS
-    .map((contact) => {
-      const msgs = messagesFor(contact.id);
-      return {
+  const threads = [];
+  for (const owner of scopeUsernames()) {
+    for (const contact of CONTACTS) {
+      const msgs = messagesFor(contact.id, owner);
+      if (!msgs.length) continue;
+      const account = accountByUsername(owner);
+      threads.push({
         contact,
+        owner,
+        ownerName: account ? account.name : owner,
         last: msgs[msgs.length - 1],
         unread: msgs.filter(isUnread).length,
         allText: msgs.map((m) => m.text).join(" ")
-      };
-    })
-    .filter((t) => t.last)
-    .sort((a, b) => new Date(b.last.time) - new Date(a.last.time));
+      });
+    }
+  }
+  return threads.sort((a, b) => new Date(b.last.time) - new Date(a.last.time));
 }
 
 function renderFilters(threads) {
@@ -46,11 +53,12 @@ function renderThreads(query) {
   const threads = buildThreads();
   const visible = threads
     .filter((t) => inboxFilter === "all" || t.unread)
-    .filter(({ contact, allText }) =>
+    .filter(({ contact, allText, owner, ownerName }) =>
       !q ||
       displayName(contact).toLowerCase().includes(q) ||
       contact.phone.toLowerCase().includes(q) ||
-      allText.toLowerCase().includes(q)
+      allText.toLowerCase().includes(q) ||
+      (showOwnerTags() && (ownerName.toLowerCase().includes(q) || owner.includes(q)))
     );
 
   renderFilters(threads);
@@ -64,7 +72,7 @@ function renderThreads(query) {
   }
 
   let currentBucket = null;
-  for (const { contact, last, unread } of visible) {
+  for (const { contact, owner, last, unread } of visible) {
     const bucket = dayBucket(new Date(last.time));
     if (bucket !== currentBucket) {
       currentBucket = bucket;
@@ -77,7 +85,7 @@ function renderThreads(query) {
     const li = document.createElement("li");
     const link = document.createElement("a");
     link.className = "list-item" + (unread ? " unread" : "");
-    link.href = conversationUrl(contact.id);
+    link.href = conversationUrl(contact.id, owner);
 
     const main = document.createElement("div");
     main.className = "item-main";
@@ -110,7 +118,8 @@ function renderThreads(query) {
     }
 
     top.append(name);
-    if (showNumberTags()) top.append(numberTag(last.numberId));
+    if (showOwnerTags()) top.append(ownerTag(owner));
+    if (showNumberTags()) top.append(numberTag(last.numberId, owner));
     top.append(time);
     main.append(top, bottom);
     link.append(createAvatar(contact), main);
@@ -125,6 +134,7 @@ function renderThreads(query) {
 }
 
 $("search").addEventListener("input", (e) => renderThreads(e.target.value.trim()));
+attachSuggest($("search"), "messages");
 
 renderThreads("");
 

@@ -72,8 +72,8 @@ function getParam(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
-function conversationUrl(contactId) {
-  return "conversation.html?id=" + encodeURIComponent(contactId);
+function conversationUrl(contactId, owner) {
+  return "conversation.html?id=" + encodeURIComponent(contactId) + (owner && owner !== myUsername() ? "&user=" + encodeURIComponent(owner) : "");
 }
 
 function contactUrl(contactId) {
@@ -411,16 +411,72 @@ function numberDisplay(n) {
 
 // SIM 1 green, SIM 2 indigo — the same colours everywhere
 function numberColor(id) {
-  const n = numberById(id);
+  const n = numberById(id) || readableNumbers().find((x) => x.id === id);
   return NUMBER_COLORS[n && n.slot === 2 ? 1 : 0];
 }
 
-// SIMs whose messages and calls are shown (all of the phone's SIMs once signed in)
-function readableNumbers() {
-  return getNumbers();
+function myUsername() {
+  return (getUser() || {}).username || "";
 }
 
-// "All numbers", or the one number picked in the switcher
+// ---------- Whose data is on screen ----------
+// Everyone sees their own phone. Admins can also switch the whole app to all users, or to one user:
+// Messages then shows their messages, Calls their call logs, Contacts their contacts.
+const VIEW_USER_KEY = "smsReader.viewUser";
+
+// "me", "all", or a username
+function getViewUser() {
+  if (!isAdmin()) return "me";
+  const v = readJSON(localStorage, accountKey(VIEW_USER_KEY));
+  if (v === "all") return v;
+  if (v && v !== myUsername() && getAccounts().some((a) => a.username === v)) return v;
+  return "me";
+}
+
+function setViewUser(value) {
+  writeJSON(localStorage, accountKey(VIEW_USER_KEY), value);
+  // SIM 1 / SIM 2 may differ between users: start from both SIMs
+  setSelectedNumberId("all");
+}
+
+// Usernames whose data is on screen
+function scopeUsernames() {
+  const v = getViewUser();
+  if (v === "me") return [myUsername()];
+  if (v === "all") return getAccounts().filter((a) => simsOfUser(a.username).length).map((a) => a.username);
+  return [v];
+}
+
+// Several people's data together: tag each item with whose phone it came from
+function showOwnerTags() {
+  return getViewUser() === "all";
+}
+
+function accountByUsername(username) {
+  return getAccounts().find((a) => a.username === username) || null;
+}
+
+// A user's SIMs (yours from your phone; others' from what their app has synced)
+function simsOfUser(username) {
+  if (username === myUsername()) return getNumbers();
+  const account = accountByUsername(username);
+  const phone = account && phoneOfUser(account);
+  return phone ? phone.numbers.slice().sort((a, b) => a.slot - b.slot) : [];
+}
+
+// The SIMs offered in the SIM switch: one user's SIMs, or "SIM 1" / "SIM 2" across all users
+function readableNumbers() {
+  const users = scopeUsernames();
+  if (users.length === 1) return simsOfUser(users[0]);
+  const slots = [...new Set(users.flatMap((u) => simsOfUser(u).map((n) => n.slot)))].sort();
+  return slots.map((slot) => ({ id: "n" + slot, slot, label: "SIM " + slot, country: "", number: "", allUsers: true }));
+}
+
+function scopeNumberById(id) {
+  return readableNumbers().find((n) => n.id === id);
+}
+
+// "Both SIMs", or the one SIM picked in the switch
 function getSelectedNumberId() {
   const id = readJSON(localStorage, accountKey(SELECTED_KEY));
   return id && readableNumbers().some((n) => n.id === id) ? id : "all";
@@ -430,73 +486,128 @@ function setSelectedNumberId(id) {
   writeJSON(localStorage, accountKey(SELECTED_KEY), id);
 }
 
+function selectedSlot() {
+  const n = scopeNumberById(getSelectedNumberId());
+  return n ? n.slot : null;
+}
+
 function activeNumberIds() {
   const selected = getSelectedNumberId();
   return selected === "all" ? readableNumbers().map((n) => n.id) : [selected];
 }
 
-// Show which number a message/call used only when several numbers are on screen together
+// Show which SIM a message/call used only when several SIMs are on screen together
 function showNumberTags() {
   return getSelectedNumberId() === "all" && readableNumbers().length > 1;
 }
 
-function numberTag(numberId) {
-  const n = numberById(numberId);
+function numberTag(numberId, owner) {
+  const sims = simsOfUser(owner || scopeUsernames()[0] || myUsername());
+  const n = sims.find((x) => x.id === numberId);
   const tag = document.createElement("span");
   tag.className = "num-tag";
   if (!n) return tag;
   tag.textContent = n.label + " · SIM " + n.slot;
   tag.title = numberDisplay(n);
-  tag.style.setProperty("--num-color", numberColor(n.id));
+  tag.style.setProperty("--num-color", NUMBER_COLORS[n.slot === 2 ? 1 : 0]);
+  return tag;
+}
+
+// "Priya Sharma" with a small avatar: whose phone an item came from
+function ownerTag(username) {
+  const account = accountByUsername(username);
+  const tag = document.createElement("span");
+  tag.className = "owner-tag";
+  const name = account ? account.name : username;
+  const dot = document.createElement("span");
+  dot.className = "owner-dot";
+  setAvatar(dot, { id: account ? account.id : username, name });
+  tag.append(dot, document.createTextNode(name));
+  tag.title = name + "'s phone";
   return tag;
 }
 
 // ---------- Data ----------
 
+// A saved contact, or an "unknown number" for ids like "x:919876543210" (numbers dialled from the web)
 function getContact(id) {
-  return CONTACTS.find((c) => c.id === id);
+  const found = CONTACTS.find((c) => c.id === id);
+  if (found || !String(id).startsWith("x:")) return found;
+  const digits = id.slice(2);
+  const local = digits.length > 10 ? digits.slice(-10) : digits;
+  const code = digits.length > 10 ? "+" + digits.slice(0, -10) : "+91";
+  return { id, name: "", phone: formatPhone(code, local), email: "", address: "", company: "", label: "Unknown", notes: "" };
+}
+
+// Each user's phone syncs its own messages and calls. In this demo every user gets their own slice of the
+// sample data (the demo admin gets all of it), so an admin viewing a user sees what that user sees.
+function ownsSample(username, item) {
+  if (username === "admin") return true;
+  let hash = 7;
+  for (const ch of username + ":" + item.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return hash % 4 !== 0;
+}
+
+// Messages and calls on the given SIMs of the given user
+function messagesOf(username, simIds) {
+  return MESSAGES.filter((m) => simIds.includes(m.numberId) && ownsSample(username, m));
+}
+
+function callsOf(username, simIds) {
+  const placed = placedCallsOf(username).filter((c) => simIds.includes(c.numberId));
+  return [...placed, ...CALLS.filter((c) => simIds.includes(c.numberId) && ownsSample(username, c))];
+}
+
+// Items of everyone in view, on one SIM slot or all of them. Each item gets an "owner" (username).
+function scopeItems(kind, slot) {
+  return scopeUsernames().flatMap((username) => {
+    const ids = simsOfUser(username).filter((n) => !slot || n.slot === slot).map((n) => n.id);
+    return (kind === "messages" ? messagesOf(username, ids) : callsOf(username, ids)).map((item) => ({ ...item, owner: username }));
+  });
 }
 
 function visibleMessages() {
-  const ids = activeNumberIds();
-  return MESSAGES.filter((m) => ids.includes(m.numberId));
+  return scopeItems("messages", selectedSlot());
 }
 
-function messagesFor(contactId) {
+// One conversation: with this contact, on one person's phone when given
+function messagesFor(contactId, owner) {
   return visibleMessages()
-    .filter((m) => m.contactId === contactId)
+    .filter((m) => m.contactId === contactId && (!owner || m.owner === owner))
     .sort((a, b) => new Date(a.time) - new Date(b.time));
 }
 
 function visibleCalls() {
-  const ids = activeNumberIds();
-  return CALLS.filter((c) => ids.includes(c.numberId)).sort((a, b) => new Date(b.time) - new Date(a.time));
+  return scopeItems("calls", selectedSlot()).sort((a, b) => new Date(b.time) - new Date(a.time));
 }
 
-function callsFor(contactId) {
-  return visibleCalls().filter((c) => c.contactId === contactId);
+function callsFor(contactId, owner) {
+  return visibleCalls().filter((c) => c.contactId === contactId && (!owner || c.owner === owner));
 }
 
 // Contacts that texted or called the numbers on screen
 function contactsInView() {
   const ids = new Set([...visibleMessages(), ...visibleCalls()].map((x) => x.contactId));
-  return CONTACTS.filter((c) => ids.has(c.id));
+  return [...CONTACTS.filter((c) => ids.has(c.id)), ...[...ids].filter((id) => String(id).startsWith("x:")).map(getContact)];
 }
 
 // Read status is kept in the browser until the backend exists
-const READ_KEY = "smsReader.readIds";
+const READ_KEY = "smsReader.readIds.v2";
 
 function loadReadIds() {
   return new Set(readJSON(localStorage, READ_KEY) || []);
 }
 
+// Read status belongs to the phone's owner (an admin opening a user's chat doesn't change it)
+const readId = (m) => (m.owner || myUsername()) + ":" + m.id;
+
 function isUnread(message) {
-  return message.direction === "in" && !message.read && !loadReadIds().has(message.id);
+  return message.direction === "in" && !message.read && !loadReadIds().has(readId(message));
 }
 
 function markRead(messages) {
   const ids = loadReadIds();
-  messages.forEach((m) => ids.add(m.id));
+  messages.filter((m) => !m.owner || m.owner === myUsername()).forEach((m) => ids.add(readId(m)));
   writeJSON(localStorage, READ_KEY, [...ids]);
 }
 
@@ -568,6 +679,10 @@ if (document.body.dataset.view) setView(document.body.dataset.view);
 
 if (document.body.dataset.nav && !getUser()) {
   location.replace(loginUrl());
+} else if (document.body.dataset.nav && document.body.dataset.view === "mobile" && isAdmin()) {
+  // Admins manage everyone from the web view; the mobile view is for people's own phones
+  setView("web");
+  location.replace(ROOT + "web/" + location.pathname.split("/").pop() + location.search);
 }
 
 if (document.body.dataset.nav) {
@@ -589,15 +704,28 @@ if (document.body.dataset.nav) {
 // (The demo admin account gets a dual SIM phone so both SIMs can be tried.)
 function ensurePhone(user) {
   if (!user || getPhone()) return;
+  saveAccount(defaultPhoneFor(user));
+}
+
+function defaultPhoneFor(user) {
   const now = new Date().toISOString();
   const sims = user.number
     ? [{ country: user.country, number: user.number, label: "Personal" }]
     : [{ country: "+91", number: "9876543210", label: "Personal" }, { country: "+91", number: "9123400001", label: "Work" }];
-  saveAccount({
+  return {
     seq: sims.length,
     devices: [{ id: "d1", name: "My phone", type: "android", addedAt: now }],
     numbers: sims.map((s, i) => ({ id: "n" + (i + 1), deviceId: "d1", slot: i + 1, country: s.country, number: s.number, label: s.label, verifiedAt: now }))
-  });
+  };
+}
+
+// Any user's phone, for the admin: what their app has saved, or what they get when they first sign in.
+// Users without a phone or a mobile number have nothing synced yet.
+function phoneOfUser(account) {
+  const saved = readJSON(localStorage, ACCOUNT_KEY + "." + account.username);
+  if (saved && Array.isArray(saved.numbers) && saved.numbers.length) return saved;
+  if (account.number || account.username === "admin") return defaultPhoneFor(account);
+  return null;
 }
 ensurePhone(getUser());
 
@@ -717,6 +845,12 @@ const ICONS = {
   close: svg('<path d="M18 6 6 18M6 6l12 12"/>'),
   back: svg('<path d="M19 12H5M11 19l-7-7 7-7"/>'),
   chevron: svg('<path d="m9 18 6-6-6-6"/>'),
+  pin: svg('<path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.6"/>'),
+  bell: svg('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>'),
+  lock: svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
+  micOff: svg('<path d="M2 2l20 20"/><path d="M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.6"/><path d="M19 10v2a7 7 0 0 1-.6 2.8M5 10v2a7 7 0 0 0 12 5"/><path d="M12 19v3"/>'),
+  keypad: svg('<circle cx="6" cy="5" r="1.3"/><circle cx="12" cy="5" r="1.3"/><circle cx="18" cy="5" r="1.3"/><circle cx="6" cy="11" r="1.3"/><circle cx="12" cy="11" r="1.3"/><circle cx="18" cy="11" r="1.3"/><circle cx="6" cy="17" r="1.3"/><circle cx="12" cy="17" r="1.3"/><circle cx="18" cy="17" r="1.3"/><circle cx="12" cy="22" r="1.3"/>'),
+  speaker: svg('<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>'),
   profile: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   key: svg('<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8"/><path d="m17 6 3 3"/><path d="m15 8 2 2"/>'),
   users: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 11-7.4"/><path d="M19 15v6M16 18h6"/>'),
@@ -743,6 +877,7 @@ const NAV_SECTIONS = [
     title: "Manage",
     items: [
       { nav: "devices", href: "devices.html", label: "My phone", icon: "phone" },
+      { nav: "location", href: "location.html", label: "Find my phone", icon: "pin" },
       { nav: "profile", href: "profile.html", label: "Profile", icon: "profile" },
       { nav: "users", href: "users.html", label: "Users", icon: "users", adminOnly: true }
     ]
@@ -769,15 +904,15 @@ function buildNumberSelect(select) {
 
   const all = document.createElement("option");
   all.value = "all";
-  all.textContent = numbers.length === 0 ? "Phone not set up"
-    : numbers.length === 1 ? numberDisplay(numbers[0]) : "Both SIMs";
+  all.textContent = numbers.length === 0 ? "No phone"
+    : numbers.length === 1 ? (numbers[0].allUsers ? "SIM 1" : numberDisplay(numbers[0])) : "Both SIMs";
   select.appendChild(all);
 
   if (numbers.length > 1) {
     numbers.forEach((n) => {
       const opt = document.createElement("option");
       opt.value = n.id;
-      opt.textContent = "SIM " + n.slot + " · " + n.label + " (" + numberDisplay(n) + ")";
+      opt.textContent = n.allUsers ? "SIM " + n.slot + " (all users)" : "SIM " + n.slot + " · " + n.label + " (" + numberDisplay(n) + ")";
       select.appendChild(opt);
     });
   }
@@ -792,20 +927,72 @@ function buildNumberSelect(select) {
 
 function selectedNumberCaption() {
   const numbers = readableNumbers();
-  const selected = numberById(getSelectedNumberId());
-  if (selected) return "SIM " + selected.slot + " · " + selected.label;
-  if (numbers.length === 1) return "SIM 1 · " + numbers[0].label;
+  const selected = scopeNumberById(getSelectedNumberId());
+  if (selected) return selected.allUsers ? "SIM " + selected.slot + " · all users" : "SIM " + selected.slot + " · " + selected.label;
+  if (numbers.length === 1) return numbers[0].allUsers ? "SIM 1 · all users" : "SIM 1 · " + numbers[0].label;
   if (numbers.length === 0) return getView() === "mobile" ? "Set up this phone" : "Install the app";
   return "Viewing both SIMs";
 }
 
 function fillLinkedNumberText() {
   const numbers = readableNumbers();
-  const selected = numberById(getSelectedNumberId());
-  const text = selected
-    ? numberDisplay(selected)
-    : numbers.length === 1 ? numberDisplay(numbers[0]) : "both SIMs";
+  const selected = scopeNumberById(getSelectedNumberId());
+  const v = getViewUser();
+  const who = v === "all" ? "all users" : v === "me" ? "" : (accountByUsername(v) || {}).name;
+  const sims = selected
+    ? (selected.allUsers ? "SIM " + selected.slot : numberDisplay(selected))
+    : numbers.length === 1 && !numbers[0].allUsers ? numberDisplay(numbers[0]) : "both SIMs";
+  const text = who ? who + (v === "all" ? " · " + sims : " · " + sims) : sims;
   document.querySelectorAll("[data-linked-number]").forEach((el) => { el.textContent = text; });
+}
+
+// Admins: "View" switch — My phone, All users, or one user
+function buildViewUserSelect(select) {
+  select.innerHTML = "";
+  const add = (value, text) => {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = text;
+    select.appendChild(opt);
+  };
+  add("me", "My phone");
+  add("all", "All users");
+  for (const a of getAccounts()) {
+    if (a.username === myUsername()) continue;
+    add(a.username, a.name + (simsOfUser(a.username).length ? "" : " (no phone)"));
+  }
+  select.value = getViewUser();
+  select.addEventListener("change", () => {
+    setViewUser(select.value);
+    location.reload();
+  });
+}
+
+// A bar at the top of the page while an admin is looking at other people's data
+function renderScopeBanner() {
+  const v = getViewUser();
+  const host = document.querySelector(".m-content") || document.querySelector(".card");
+  if (v === "me" || !host || !document.body.dataset.nav || document.body.dataset.nav === "devices" || document.body.dataset.nav === "profile") return;
+  const bar = document.createElement("div");
+  bar.className = "scope-banner";
+  bar.setAttribute("role", "status");
+  const text = document.createElement("span");
+  if (v === "all") {
+    text.innerHTML = "<strong>Viewing all users</strong><small>Each item shows whose phone it's from</small>";
+  } else {
+    const account = accountByUsername(v);
+    text.append(ownerTag(v), document.createTextNode(" Viewing " + (account ? account.name : v) + "'s phone"));
+  }
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "link link-btn";
+  back.textContent = "Back to my phone";
+  back.addEventListener("click", () => {
+    setViewUser("me");
+    location.reload();
+  });
+  bar.append(text, back);
+  host.insertBefore(bar, host.querySelector(".page-header, .bar-header, .m-head, .m-subhead") ? host.querySelector(".page-header, .bar-header, .m-head, .m-subhead").nextSibling : host.firstChild);
 }
 
 function currentUserInfo() {
@@ -828,6 +1015,7 @@ function renderSidebar() {
       '<a class="phone-chip-icon" href="devices.html" title="My phone">' + ICONS.phone + "</a>" +
       '<label class="number-switch-text"><small id="ns-caption"></small><select id="number-select" aria-label="Number to view"></select></label>' +
     "</div>" +
+    (isAdmin() ? '<div class="number-switch user-switch"><span class="phone-chip-icon">' + ICONS.users + '</span><label class="number-switch-text"><small>View</small><select id="view-user-select" aria-label="Whose data to view"></select></label></div>' : "") +
     NAV_SECTIONS.map((section) =>
       '<div class="nav-section">' + section.title + "</div>" +
       section.items.filter((item) => !item.adminOnly || isAdmin()).map((item) => {
@@ -841,7 +1029,7 @@ function renderSidebar() {
     '<div class="sidebar-footer">' +
       '<div class="avatar" id="user-avatar"></div>' +
       '<div class="user-info"><span class="user-name" id="user-name"></span><span class="user-email" id="user-email"></span></div>' +
-      '<a class="icon-btn view-btn" id="switch-view" href="#" title="Mobile view" aria-label="Switch to mobile view">' + ICONS.phone + "</a>" +
+      (isAdmin() ? "" : '<a class="icon-btn view-btn" id="switch-view" href="#" title="Mobile view" aria-label="Switch to mobile view">' + ICONS.phone + "</a>") +
       '<button class="icon-btn logout-btn" id="logout-btn" title="Log out" aria-label="Log out">' + ICONS.logout + "</button>" +
     "</div>";
 
@@ -851,7 +1039,8 @@ function renderSidebar() {
   $("user-email").textContent = handle ? "@" + handle : "";
   $("ns-caption").textContent = selectedNumberCaption();
   buildNumberSelect($("number-select"));
-  $("switch-view").href = otherViewUrl();
+  if ($("view-user-select")) buildViewUserSelect($("view-user-select"));
+  if ($("switch-view")) $("switch-view").href = otherViewUrl();
   $("logout-btn").addEventListener("click", logout);
 
   // Phone-width web view: the sidebar slides in as a drawer
@@ -890,8 +1079,8 @@ function renderMobileShell() {
     setAvatar($("user-avatar"), { id: handle || "guest", name });
     $("ns-caption").textContent = selectedNumberCaption();
     buildNumberSelect($("number-select"));
-    const sel = numberById(getSelectedNumberId());
-    topbar.querySelector(".m-number-dot").style.background = sel ? numberColor(sel.id) : "var(--gradient)";
+    const sel = scopeNumberById(getSelectedNumberId());
+    topbar.querySelector(".m-number-dot").style.background = sel ? NUMBER_COLORS[sel.slot === 2 ? 1 : 0] : "var(--gradient)";
     // Chat/contact headers stick just below the top bar
     document.documentElement.style.setProperty("--m-topbar-h", topbar.offsetHeight + "px");
   }
@@ -915,6 +1104,7 @@ function renderMobileShell() {
       '<div class="m-sheet-grip"></div>' +
       '<div class="m-sheet-user"><span class="avatar" id="sheet-avatar"></span><span><strong id="sheet-name"></strong><small id="sheet-handle"></small></span>' +
         '<button type="button" class="icon-btn" data-close-sheet aria-label="Close menu">' + ICONS.close + "</button></div>" +
+      (isAdmin() ? '<p class="m-sheet-title">View</p><label class="m-sheet-view">' + ICONS.users + '<select id="view-user-select" aria-label="Whose data to view"></select></label>' : "") +
       NAV_SECTIONS.map((section) =>
         '<p class="m-sheet-title">' + section.title + "</p>" +
         section.items.filter((item) => !item.adminOnly || isAdmin()).map((item) =>
@@ -926,6 +1116,7 @@ function renderMobileShell() {
       '<button type="button" class="m-sheet-link danger" id="logout-btn">' + ICONS.logout + "<span>Log out</span></button>" +
     "</div>";
   (document.querySelector(".m-phone") || document.body).appendChild(sheet);
+  if ($("view-user-select")) buildViewUserSelect($("view-user-select"));
 
   setAvatar($("sheet-avatar"), { id: handle || "guest", name });
   $("sheet-name").textContent = name;
@@ -950,6 +1141,524 @@ function refreshNavBadges() {
     badge.textContent = count;
     badge.hidden = count === 0;
   });
+}
+
+// ---------- Type-ahead search ----------
+// After the first letter, a list of matching contacts, numbers, users and messages appears under the
+// search box. Words that start with what you typed come first, and the matching letters are highlighted.
+
+// 0 = a word starts with q, 1 = q appears inside, -1 = no match
+function matchRank(text, q) {
+  const t = (text || "").toLowerCase();
+  const i = t.indexOf(q);
+  if (i < 0) return -1;
+  return i === 0 || /[\s@._(+-]/.test(t[i - 1]) ? 0 : 1;
+}
+
+// Builds the suggestions for a search box on the given page
+function searchSuggestions(page, query) {
+  const q = query.trim().toLowerCase();
+  const digits = q.replace(/\D/g, "");
+  if (!q) return [];
+  const out = [];
+  const best = (...ranks) => Math.min(...ranks.map((r) => (r < 0 ? 9 : r)));
+
+  if (page === "users") {
+    for (const a of getAccounts()) {
+      const byNumber = digits.length >= 2 && a.number && (a.country + a.number).replace(/\D/g, "").includes(digits) ? 1 : -1;
+      const rank = best(matchRank(a.name, q), matchRank(a.username, q), matchRank(a.email, q), byNumber);
+      if (rank < 9) out.push({ rank, group: "Users", label: a.name, sub: "@" + a.username + (a.email ? " · " + a.email : ""), value: a.username, avatar: { id: a.id, name: a.name } });
+    }
+    return out.sort((x, y) => x.rank - y.rank || x.label.localeCompare(y.label)).slice(0, 8);
+  }
+
+  // Contacts, or their numbers when you type digits
+  // The dialler offers every saved contact; other boxes offer the contacts on screen
+  const people = page === "dial" ? CONTACTS.filter((x) => /^\+?[\d\s()-]+$/.test(x.phone)) : contactsInView();
+  for (const c of people) {
+    const rank = best(matchRank(displayName(c), q), page === "contacts" ? matchRank(c.company, q) : -1, page === "contacts" ? matchRank(c.label, q) : -1);
+    if (rank < 9) {
+      out.push({ rank, group: "Contacts", label: displayName(c), sub: [c.name ? c.phone : "", c.company, c.label].filter(Boolean).join(" · "), value: displayName(c), avatar: c });
+    } else if (digits.length >= 2 && c.phone.replace(/\D/g, "").includes(digits)) {
+      out.push({ rank: 1, group: "Numbers", label: c.phone, sub: displayName(c), value: c.phone, avatar: c });
+    }
+  }
+
+  // People whose phones are on screen (admins viewing all users)
+  if (showOwnerTags() && page !== "contacts") {
+    for (const username of scopeUsernames()) {
+      const a = accountByUsername(username);
+      const rank = a ? best(matchRank(a.name, q), matchRank(a.username, q)) : 9;
+      if (rank < 9) out.push({ rank, group: "Users", label: a.name, sub: "@" + a.username, value: a.name, avatar: { id: a.id, name: a.name } });
+    }
+  }
+
+  // Message text: picking one opens that conversation
+  if (page === "messages" && q.length >= 2) {
+    const seen = new Set();
+    for (const m of visibleMessages().sort((x, y) => y.time.localeCompare(x.time))) {
+      const rank = matchRank(m.text, q);
+      const key = m.owner + ":" + m.contactId;
+      if (rank < 0 || seen.has(key)) continue;
+      seen.add(key);
+      const c = getContact(m.contactId);
+      const i = m.text.toLowerCase().indexOf(q);
+      const start = Math.max(0, i - 18);
+      const end = i + q.length + 32;
+      const snippet = (start ? "…" : "") + m.text.slice(start, end) + (end < m.text.length ? "…" : "");
+      out.push({ rank, group: "Messages", icon: "messages", label: snippet, sub: displayName(c) + " · " + formatListTime(new Date(m.time)), href: conversationUrl(c.id, m.owner) });
+      if (seen.size >= 4) break;
+    }
+  }
+
+  const groupOrder = ["Contacts", "Numbers", "Users", "Messages"];
+  return out
+    .sort((x, y) => groupOrder.indexOf(x.group) - groupOrder.indexOf(y.group) || x.rank - y.rank || x.label.localeCompare(y.label))
+    .slice(0, 10);
+}
+
+// Shows suggestions under a search input; choosing one searches for it (or opens a message)
+function attachSuggest(input, page) {
+  const wrap = input.closest(".search") || input.parentElement;
+  const list = document.createElement("ul");
+  list.className = "suggest";
+  list.id = input.id + "-suggest";
+  list.setAttribute("role", "listbox");
+  list.hidden = true;
+  wrap.appendChild(list);
+  input.setAttribute("role", "combobox");
+  input.setAttribute("aria-autocomplete", "list");
+  input.setAttribute("aria-controls", list.id);
+  input.setAttribute("aria-expanded", "false");
+  input.autocomplete = "off";
+
+  let items = [];
+  let active = -1;
+
+  function close() {
+    list.hidden = true;
+    active = -1;
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+  }
+
+  // The typed letters, highlighted inside a suggestion
+  function highlight(el, text, q) {
+    const i = text.toLowerCase().indexOf(q);
+    if (i < 0) {
+      el.textContent = text;
+      return;
+    }
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(i, i + q.length);
+    el.append(text.slice(0, i), mark, text.slice(i + q.length));
+  }
+
+  function pick(item) {
+    close();
+    if (item.href) {
+      location.href = item.href;
+      return;
+    }
+    input.value = item.value;
+    // Not a typed change: run the page's search without reopening the list
+    input.dispatchEvent(new CustomEvent("input", { bubbles: true, detail: { picked: true } }));
+  }
+
+  function setActive(i) {
+    active = i;
+    const options = list.querySelectorAll(".suggest-item");
+    options.forEach((el, k) => el.classList.toggle("active", k === i));
+    if (options[i]) {
+      input.setAttribute("aria-activedescendant", options[i].id);
+      options[i].scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  function render() {
+    const raw = input.value.trim();
+    const q = raw.toLowerCase();
+    items = searchSuggestions(page, q);
+    list.innerHTML = "";
+    active = -1;
+    if (!q) {
+      close();
+      return;
+    }
+    if (!items.length) {
+      const none = document.createElement("li");
+      none.className = "suggest-empty";
+      none.textContent = "No matches for “" + raw + "”";
+      list.appendChild(none);
+    }
+    let group = null;
+    items.forEach((item, i) => {
+      if (item.group !== group) {
+        group = item.group;
+        const head = document.createElement("li");
+        head.className = "suggest-group";
+        head.setAttribute("role", "presentation");
+        head.textContent = group;
+        list.appendChild(head);
+      }
+      const li = document.createElement("li");
+      li.className = "suggest-item";
+      li.id = list.id + "-" + i;
+      li.setAttribute("role", "option");
+      let icon;
+      if (item.avatar) {
+        icon = createAvatar(item.avatar);
+      } else {
+        icon = document.createElement("span");
+        icon.className = "suggest-icon";
+        icon.innerHTML = ICONS[item.icon];
+      }
+      const text = document.createElement("span");
+      text.className = "suggest-text";
+      const label = document.createElement("strong");
+      highlight(label, item.label, q);
+      const sub = document.createElement("small");
+      sub.textContent = item.sub || "";
+      text.append(label, sub);
+      li.append(icon, text);
+      // mousedown, so the pick happens before the input loses focus
+      li.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        pick(item);
+      });
+      list.appendChild(li);
+    });
+    list.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+  }
+
+  input.addEventListener("input", (e) => {
+    if (!(e.detail && e.detail.picked)) render();
+  });
+  input.addEventListener("focus", () => {
+    if (input.value.trim()) render();
+  });
+  input.addEventListener("blur", () => setTimeout(close, 150));
+  input.addEventListener("keydown", (e) => {
+    if (list.hidden) return;
+    if (e.key === "Escape") {
+      close();
+      return;
+    }
+    if (!items.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((active + 1) % items.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((active - 1 + items.length) % items.length);
+    } else if (e.key === "Enter" && active >= 0) {
+      e.preventDefault();
+      pick(items[active]);
+    }
+  });
+}
+
+// ---------- Calling from the web ----------
+// A computer can't place phone calls itself: the web view asks your phone to make the call (like a phone
+// link app) and shows the call here. Every "Call" button in the web view opens this call screen.
+// UI only: the call is simulated; the backend and the app on the phone will connect the real call.
+
+function startCall(number, options = {}) {
+  const digits = String(number).replace(/[^\d+]/g, "");
+  if (digits.replace(/\D/g, "").length < 6) {
+    showToast("That doesn't look like a phone number");
+    return;
+  }
+  const sims = getNumbers();
+  if (!sims.length) {
+    showToast("Set up your phone first");
+    return;
+  }
+  const contact = contactForNumber(digits);
+  const sim = sims.find((n) => n.id === options.simId) || sims[0];
+
+  const dialog = document.createElement("dialog");
+  dialog.className = "call-screen";
+  dialog.setAttribute("aria-label", "Call with " + displayName(contact));
+  dialog.innerHTML =
+    '<div class="call-card">' +
+      '<p class="call-via"></p>' +
+      '<div class="call-avatar"></div>' +
+      '<h2 class="call-who"></h2>' +
+      '<p class="call-number"></p>' +
+      '<p class="call-state" role="status">Calling…</p>' +
+      '<p class="call-keys" aria-live="polite"></p>' +
+      '<div class="call-keypad" hidden></div>' +
+      '<div class="call-controls">' +
+        '<button type="button" class="call-ctl" data-ctl="mute"><span>' + ICONS.micOff + "</span>Mute</button>" +
+        '<button type="button" class="call-ctl" data-ctl="keypad"><span>' + ICONS.keypad + "</span>Keypad</button>" +
+        '<button type="button" class="call-ctl" data-ctl="speaker"><span>' + ICONS.speaker + "</span>Speaker</button>" +
+      "</div>" +
+      '<button type="button" class="call-end" aria-label="End call">' + ICONS.call + "</button>" +
+    "</div>";
+  dialog.querySelector(".call-via").textContent = "Calling from " + ((getPhone() || {}).name || "your phone") + " · SIM " + sim.slot + " · " + sim.label;
+  const avatar = createAvatar(contact, "avatar");
+  dialog.querySelector(".call-avatar").appendChild(avatar);
+  dialog.querySelector(".call-who").textContent = displayName(contact);
+  dialog.querySelector(".call-number").textContent = contact.name ? contact.phone : (contact.label || "");
+
+  // Keypad (tones sent during the call)
+  const pad = dialog.querySelector(".call-keypad");
+  for (const k of ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = k;
+    b.addEventListener("click", () => { dialog.querySelector(".call-keys").textContent += k; });
+    pad.appendChild(b);
+  }
+
+  document.body.appendChild(dialog);
+  dialog.showModal();
+
+  let connectedAt = null;
+  let timer = null;
+  const state = dialog.querySelector(".call-state");
+  const ring = setTimeout(() => {
+    connectedAt = Date.now();
+    dialog.classList.add("connected");
+    timer = setInterval(() => {
+      const s = Math.floor((Date.now() - connectedAt) / 1000);
+      state.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    }, 250);
+    state.textContent = "0:00";
+  }, options.answerAfter ?? 2500);
+
+  dialog.querySelectorAll("[data-ctl]").forEach((btn) => btn.addEventListener("click", () => {
+    btn.classList.toggle("on");
+    if (btn.dataset.ctl === "keypad") pad.hidden = !btn.classList.contains("on");
+  }));
+
+  function end() {
+    clearTimeout(ring);
+    clearInterval(timer);
+    const seconds = connectedAt ? Math.round((Date.now() - connectedAt) / 1000) : 0;
+    savePlacedCall({ contactId: contact.id, numberId: sim.id, type: "outgoing", time: new Date().toISOString(), duration: seconds });
+    dialog.close();
+    dialog.remove();
+    showToast(connectedAt ? "Call ended · " + formatDuration(seconds) : "Call cancelled");
+    if (typeof options.onEnd === "function") options.onEnd();
+    else if (["dashboard", "calls", "contact"].includes(document.body.dataset.nav)) setTimeout(() => location.reload(), 900);
+  }
+  dialog.querySelector(".call-end").addEventListener("click", end);
+  dialog.addEventListener("cancel", (e) => {
+    e.preventDefault();
+    end();
+  });
+}
+
+// Calls placed from the web, kept with the rest of the call log (per user)
+const PLACED_KEY = "smsReader.placedCalls";
+
+function placedCallsOf(username) {
+  return readJSON(localStorage, PLACED_KEY + "." + username) || [];
+}
+
+function savePlacedCall(call) {
+  const list = placedCallsOf(myUsername());
+  list.unshift({ id: "p" + Date.now(), ...call });
+  writeJSON(localStorage, PLACED_KEY + "." + myUsername(), list.slice(0, 200));
+}
+
+// A saved contact with this number, or an "unknown number" entry for it
+function contactForNumber(number) {
+  const digits = number.replace(/\D/g, "");
+  const match = CONTACTS.find((c) => {
+    const d = c.phone.replace(/\D/g, "");
+    return d && (d === digits || d.endsWith(digits) || digits.endsWith(d)) && Math.min(d.length, digits.length) >= 8;
+  });
+  return match || getContact("x:" + digits);
+}
+
+// In the web view, every phone link becomes a call placed through your phone
+document.addEventListener("click", (e) => {
+  const link = e.target.closest && e.target.closest('a[href^="tel:"]');
+  if (!link || getView() !== "web" || !getUser()) return;
+  e.preventDefault();
+  startCall(decodeURIComponent(link.getAttribute("href").slice(4)));
+});
+
+// ---------- Dial pad (shared by the Dashboard and the Calls page) ----------
+
+// Places a call: through your phone with the call screen on the web; straight from the phone in the mobile view
+function placeCall(number, simId) {
+  if (getView() === "mobile") location.href = "tel:" + number.replace(/[^\d+]/g, "");
+  else startCall(number, { simId });
+}
+
+const DIALPAD_KEYS = [["1", ""], ["2", "ABC"], ["3", "DEF"], ["4", "GHI"], ["5", "JKL"], ["6", "MNO"], ["7", "PQRS"], ["8", "TUV"], ["9", "WXYZ"], ["*", ""], ["0", "+"], ["#", ""]];
+
+// The two-tone beep a phone keypad makes
+const DIALPAD_TONES = { 1: [697, 1209], 2: [697, 1336], 3: [697, 1477], 4: [770, 1209], 5: [770, 1336], 6: [770, 1477],
+  7: [852, 1209], 8: [852, 1336], 9: [852, 1477], "*": [941, 1209], 0: [941, 1336], "#": [941, 1477] };
+
+function dialTone(key) {
+  try {
+    dialTone.audio = dialTone.audio || new (window.AudioContext || window.webkitAudioContext)();
+    const audio = dialTone.audio;
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(0.08, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.18);
+    gain.connect(audio.destination);
+    for (const f of DIALPAD_TONES[key] || []) {
+      const osc = audio.createOscillator();
+      osc.frequency.value = f;
+      osc.connect(gain);
+      osc.start();
+      osc.stop(audio.currentTime + 0.18);
+    }
+  } catch {
+    // no sound available
+  }
+}
+
+// Hold a button: run onHold instead of the normal press
+function holdable(btn, onPress, onHold) {
+  let timer = null;
+  let held = false;
+  btn.addEventListener("pointerdown", (e) => {
+    if (e.button > 0) return;
+    held = false;
+    timer = setTimeout(() => { held = true; onHold(); }, 600);
+  });
+  const cancel = () => clearTimeout(timer);
+  btn.addEventListener("pointerup", cancel);
+  btn.addEventListener("pointerleave", cancel);
+  btn.addEventListener("click", () => {
+    if (!held) onPress();
+    held = false;
+  });
+}
+
+// Fills keysEl with the 12 keys and wires ⌫ and Call. Keys type into input; onCall() places the call.
+function setupDialpad({ keysEl, input, backBtn, callBtn, onCall }) {
+  const setNumber = (value) => {
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  };
+  for (const [digit, letters] of DIALPAD_KEYS) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dialpad-key";
+    btn.dataset.key = digit;
+    btn.setAttribute("aria-label", digit + (letters && digit !== "0" ? " " + letters : ""));
+    btn.innerHTML = "<strong></strong><small></small>";
+    btn.firstChild.textContent = digit;
+    btn.lastChild.textContent = letters;
+    if (digit === "0") {
+      holdable(btn, () => { dialTone("0"); setNumber(input.value + "0"); }, () => { dialTone("0"); setNumber(input.value + "+"); });
+    } else {
+      btn.addEventListener("click", () => {
+        dialTone(digit);
+        setNumber(input.value + digit);
+      });
+    }
+    keysEl.appendChild(btn);
+  }
+  holdable(backBtn, () => setNumber(input.value.slice(0, -1)), () => setNumber(""));
+  callBtn.addEventListener("click", onCall);
+
+  // Typing digits on the keyboard lights up the matching key
+  input.addEventListener("keydown", (e) => {
+    const k = e.key === "+" ? "0" : e.key;
+    const key = keysEl.querySelector('.dialpad-key[data-key="' + k + '"]');
+    if (!key) return;
+    dialTone(k);
+    key.classList.add("pressed");
+    setTimeout(() => key.classList.remove("pressed"), 150);
+  });
+}
+
+// "Rahul Verma" when the typed number belongs to a saved contact
+function contactNameForNumber(text) {
+  const digits = text.replace(/\D/g, "");
+  if (digits.length < 8) return "";
+  const c = contactForNumber(digits);
+  return c && c.name ? c.name : "";
+}
+
+// The Dial pad pop-up (Calls page): number display, SIM, 12 keys, ⌫ and Call
+function openDialpad() {
+  let dialog = $("dialpad-modal");
+  if (!dialog) {
+    dialog = document.createElement("dialog");
+    dialog.className = "modal modal-sm dialpad-modal";
+    dialog.id = "dialpad-modal";
+    dialog.setAttribute("aria-labelledby", "dp-title");
+    dialog.innerHTML =
+      '<div class="modal-card">' +
+        '<div class="dp-head"><h2 id="dp-title">Dial pad</h2>' +
+          '<button type="button" class="icon-btn" data-close aria-label="Close">' + ICONS.close + "</button></div>" +
+        '<input type="tel" id="dp-number" class="dp-number" placeholder="Enter a number" aria-label="Number to call" autocomplete="off">' +
+        '<p class="dp-match" id="dp-match" aria-live="polite"></p>' +
+        '<select id="dp-sim" class="dialer-sim dp-sim" aria-label="Call from SIM"></select>' +
+        '<div class="dialpad">' +
+          '<div class="dialpad-keys" id="dp-keys"></div>' +
+          '<div class="dialpad-actions"><span></span>' +
+            '<button type="button" class="dialpad-call" id="dp-call" aria-label="Call"><span>' + ICONS.call + "</span></button>" +
+            '<button type="button" class="dialpad-back" id="dp-back" aria-label="Delete (hold to clear)" title="Delete (hold to clear)">⌫</button>' +
+          "</div>" +
+        "</div>" +
+        '<small class="field-error dp-error" id="dp-error"></small>' +
+      "</div>";
+    const phone = document.querySelector(".m-phone");
+    if (phone && !phone.querySelector(".m-dialog-shade")) {
+      const shade = document.createElement("div");
+      shade.className = "m-dialog-shade";
+      phone.appendChild(shade);
+    }
+    (phone || document.body).appendChild(dialog);
+
+    const sims = getNumbers();
+    for (const n of sims) {
+      const opt = document.createElement("option");
+      opt.value = n.id;
+      opt.textContent = "SIM " + n.slot + " · " + n.label;
+      $("dp-sim").appendChild(opt);
+    }
+    $("dp-sim").hidden = sims.length < 2;
+
+    const input = $("dp-number");
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/[^\d+*#\s]/g, "");
+      $("dp-match").textContent = contactNameForNumber(input.value);
+      $("dp-error").textContent = "";
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        $("dp-call").click();
+      }
+    });
+    setupDialpad({
+      keysEl: $("dp-keys"),
+      input,
+      backBtn: $("dp-back"),
+      callBtn: $("dp-call"),
+      onCall: () => {
+        const number = input.value.trim();
+        if (number.replace(/\D/g, "").length < 6) {
+          $("dp-error").textContent = number ? "That doesn't look like a phone number" : "Enter a number to call";
+          input.focus();
+          return;
+        }
+        dialog.close();
+        placeCall(number, $("dp-sim").value);
+      }
+    });
+    wireDialogs();
+  }
+  $("dp-number").value = "";
+  $("dp-match").textContent = "";
+  $("dp-error").textContent = "";
+  openDialog(dialog);
+  $("dp-number").focus();
 }
 
 // ---------- Shared UI ----------
@@ -984,7 +1693,8 @@ function createCallItem(call, { showContact = true, groupedByDay = false } = {})
   name.className = "call-name";
   name.textContent = showContact ? displayName(contact) : type.label + " call";
   top.appendChild(name);
-  if (showNumberTags()) top.appendChild(numberTag(call.numberId));
+  if (showOwnerTags() && call.owner) top.appendChild(ownerTag(call.owner));
+  if (showNumberTags()) top.appendChild(numberTag(call.numberId, call.owner));
 
   const status = document.createElement("span");
   status.className = "call-status";
@@ -1084,5 +1794,6 @@ function wireDialogs() {
 document.addEventListener("DOMContentLoaded", () => {
   renderSidebar();
   renderMobileShell();
+  renderScopeBanner();
   fillLinkedNumberText();
 });

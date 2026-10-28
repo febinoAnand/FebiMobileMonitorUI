@@ -112,5 +112,6 @@ function renderContacts(query) {
 }
 
 $("search").addEventListener("input", (e) => renderContacts(e.target.value.trim()));
+attachSuggest($("search"), "contacts");
 
 renderContacts("");

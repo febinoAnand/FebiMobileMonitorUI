@@ -93,8 +93,8 @@
   const selected = getSelectedNumberId();
   const numberList = $("number-list");
   for (const n of readableNumbers()) {
-    const msgCount = MESSAGES.filter((m) => m.numberId === n.id).length;
-    const missed = CALLS.filter((c) => c.numberId === n.id && c.type === "missed").length;
+    const msgCount = scopeItems("messages", n.slot).length;
+    const missed = scopeItems("calls", n.slot).filter((c) => c.type === "missed").length;
 
     const li = document.createElement("li");
     const btn = document.createElement("button");
@@ -105,8 +105,8 @@
       '<span class="number-dot"></span>' +
       '<span class="number-main"><strong></strong><small></small></span>' +
       '<span class="number-stats"><span class="ns-msgs"></span><span class="ns-missed"></span></span>';
-    btn.querySelector("strong").textContent = numberDisplay(n);
-    btn.querySelector("small").textContent = "SIM " + n.slot + " · " + n.label;
+    btn.querySelector("strong").textContent = n.allUsers ? "SIM " + n.slot + " · all users" : numberDisplay(n);
+    btn.querySelector("small").textContent = n.allUsers ? scopeUsernames().length + " users" : "SIM " + n.slot + " · " + n.label;
     btn.querySelector(".ns-msgs").textContent = msgCount + (msgCount === 1 ? " message" : " messages");
     btn.querySelector(".ns-missed").textContent = missed ? missed + " missed" : "";
     btn.title = selected === n.id ? "Showing this number — click to show all numbers" : "Show only this number";
@@ -135,17 +135,71 @@
     const li = document.createElement("li");
     const link = document.createElement("a");
     link.className = "list-item" + (isUnread(m) ? " unread" : "");
-    link.href = conversationUrl(contact.id);
+    link.href = conversationUrl(contact.id, m.owner);
 
     const main = document.createElement("div");
     main.className = "item-main";
     main.innerHTML = '<div class="item-top"><span class="item-name"></span><span class="item-time"></span></div><div class="item-sub"></div>';
     main.querySelector(".item-name").textContent = displayName(contact);
+    if (showOwnerTags()) main.querySelector(".item-top").insertBefore(ownerTag(m.owner), main.querySelector(".item-time"));
     main.querySelector(".item-time").textContent = formatListTime(new Date(m.time));
     main.querySelector(".item-sub").textContent = m.text;
 
     link.append(createAvatar(contact), main);
     li.appendChild(link);
     recentList.appendChild(li);
+  }
+
+  // ---------- Make a call (web): through your phone ----------
+  const dialer = $("dialer-form");
+  if (dialer) {
+    const mySims = getNumbers();
+    const simSelect = $("dialer-sim");
+    for (const n of mySims) {
+      const opt = document.createElement("option");
+      opt.value = n.id;
+      opt.textContent = "SIM " + n.slot + " · " + n.label;
+      simSelect.appendChild(opt);
+    }
+    simSelect.hidden = mySims.length < 2;
+    attachSuggest($("dialer-input"), "dial");
+    $("dialer-input").addEventListener("input", () => { $("dialer-error").textContent = ""; });
+
+    dialer.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const value = $("dialer-input").value.trim();
+      const contact = CONTACTS.find((c) => displayName(c).toLowerCase() === value.toLowerCase());
+      const number = contact ? contact.phone : value;
+      const digits = number.replace(/\D/g, "");
+      const msg = !value ? "Type a name or number" : contact && !/^\+?[\d\s()-]+$/.test(contact.phone) ? displayName(contact) + " can't be called" : digits.length < 6 ? "That doesn't look like a phone number" : "";
+      $("dialer-error").textContent = msg;
+      if (msg) return;
+      placeCall(number, simSelect.value);
+    });
+
+    // ---------- Dial pad (shared with the Calls page) ----------
+    setupDialpad({
+      keysEl: $("dialpad-keys"),
+      input: $("dialer-input"),
+      backBtn: $("dialpad-back"),
+      callBtn: $("dialpad-call"),
+      onCall: () => dialer.requestSubmit()
+    });
+
+    // People you called or who called you lately, one tap to call
+    const recentPeople = [...new Set(callsOf(myUsername(), mySims.map((n) => n.id))
+      .sort((x, y) => y.time.localeCompare(x.time)).map((c) => c.contactId))]
+      .map(getContact).filter((c) => c && /^\+?[\d\s()-]+$/.test(c.phone)).slice(0, 5);
+    for (const c of recentPeople) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "dialer-chip";
+      btn.title = "Call " + displayName(c);
+      const name = document.createElement("span");
+      name.textContent = displayName(c);
+      btn.append(createAvatar(c), name);
+      btn.addEventListener("click", () => placeCall(c.phone, simSelect.value));
+      $("dialer-quick").appendChild(btn);
+    }
   }
 })();

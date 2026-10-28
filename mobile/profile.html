@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#6366f1">
   <title>Profile · SMS Reader</title>
-  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="../css/styles.css?v=20261028a">
 </head>
 <body class="m-view" data-view="mobile" data-root="../" data-nav="profile">
   <div class="m-phone">
@@ -78,13 +78,42 @@
             <button type="submit" class="btn">Change password</button>
           </form>
         </div>
+
+        <section class="panel danger-zone">
+          <div>
+            <h3>Delete my account</h3>
+            <p>Removes your account, your phone and SIMs, and your settings from SMS Reader, and signs you out. This can't be undone.</p>
+          </div>
+          <button type="button" class="btn btn-danger" id="delete-account-btn">Delete account</button>
+        </section>
       </main>
     </div>
     <nav class="m-tabbar" id="m-tabbar" aria-label="Main"></nav>
+    <div class="m-dialog-shade"></div>
+    <dialog class="modal modal-sm" id="delete-account-modal" aria-labelledby="delete-account-title">
+      <form class="modal-card" id="delete-account-form" novalidate>
+        <h2 id="delete-account-title">Delete your account?</h2>
+        <p class="modal-sub">Your account, phone, SIMs and settings are removed for good. To confirm, enter your password and type <strong>DELETE</strong>.</p>
+        <div class="field" id="field-del-password">
+          <label for="del-password">Password</label>
+          <input id="del-password" type="password" autocomplete="current-password">
+          <small class="field-error" id="del-password-error"></small>
+        </div>
+        <div class="field" id="field-del-confirm">
+          <label for="del-confirm">Type DELETE</label>
+          <input id="del-confirm" type="text" autocomplete="off" autocapitalize="characters">
+          <small class="field-error" id="del-confirm-error"></small>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+          <button type="submit" class="btn btn-danger" id="del-submit">Delete my account</button>
+        </div>
+      </form>
+    </dialog>
   </div>
 
-  <script src="../js/data.js"></script>
-  <script src="../js/common.js"></script>
-  <script src="../js/profile.js"></script>
+  <script src="../js/data.js?v=20261028a"></script>
+  <script src="../js/common.js?v=20261028a"></script>
+  <script src="../js/profile.js?v=20261028a"></script>
 </body>
 </html>

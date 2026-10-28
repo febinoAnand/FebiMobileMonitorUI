@@ -131,8 +131,9 @@
     }, 1000);
   }
 
-  function yourNumber(numberId) {
-    const n = numberById(numberId);
+  // The phone number and SIM an item came in on (on its owner's phone)
+  function yourNumber(numberId, owner) {
+    const n = simsOfUser(owner || myUsername()).find((x) => x.id === numberId);
     if (!n) return ["", ""];
     return [numberDisplay(n), "SIM " + n.slot + " · " + n.label];
   }
@@ -159,26 +160,33 @@
       for (const { kind, item } of items) {
         const c = getContact(item.contactId);
         rows.push(kind === "Message"
-          ? [...splitTime(item.time), kind, item.direction === "in" ? "Received" : "Sent", displayName(c), c.phone, ...yourNumber(item.numberId), item.text, "", ""]
-          : [...splitTime(item.time), kind, CALL_TYPES[item.type].label, displayName(c), c.phone, ...yourNumber(item.numberId), "", item.duration, formatDuration(item.duration)]);
+          ? [...splitTime(item.time), kind, item.direction === "in" ? "Received" : "Sent", displayName(c), c.phone, ...yourNumber(item.numberId, item.owner), item.text, "", ""]
+          : [...splitTime(item.time), kind, CALL_TYPES[item.type].label, displayName(c), c.phone, ...yourNumber(item.numberId, item.owner), "", item.duration, formatDuration(item.duration)]);
       }
       name = "sms-reader-messages-and-calls-" + span + ".csv";
     } else if (messages.length) {
       rows = [["Date", "Time", "Direction", "Contact", "Contact number", "Your number", "SIM", "Message"]];
       messages.sort((x, y) => x.time.localeCompare(y.time)).forEach((m) => {
         const c = getContact(m.contactId);
-        rows.push([...splitTime(m.time), m.direction === "in" ? "Received" : "Sent", displayName(c), c.phone, ...yourNumber(m.numberId), m.text]);
+        rows.push([...splitTime(m.time), m.direction === "in" ? "Received" : "Sent", displayName(c), c.phone, ...yourNumber(m.numberId, m.owner), m.text]);
       });
       name = "sms-reader-messages-" + span + ".csv";
     } else {
       rows = [["Date", "Time", "Type", "Contact", "Contact number", "Your number", "SIM", "Duration (seconds)", "Duration"]];
       calls.sort((x, y) => x.time.localeCompare(y.time)).forEach((call) => {
         const c = getContact(call.contactId);
-        rows.push([...splitTime(call.time), CALL_TYPES[call.type].label, displayName(c), c.phone, ...yourNumber(call.numberId), call.duration, formatDuration(call.duration)]);
+        rows.push([...splitTime(call.time), CALL_TYPES[call.type].label, displayName(c), c.phone, ...yourNumber(call.numberId, call.owner), call.duration, formatDuration(call.duration)]);
       });
       name = "sms-reader-calls-" + span + ".csv";
     }
 
+    if (getViewUser() !== "me") {
+      const owners = (messages.length && calls.length
+        ? [...messages, ...calls].sort((x, y) => x.time.localeCompare(y.time))
+        : (messages.length ? messages : calls)).map((x) => (accountByUsername(x.owner) || {}).name || x.owner);
+      rows = rows.map((r, i) => (i === 0 ? ["User", ...r] : [owners[i - 1], ...r]));
+      name = name.replace("sms-reader-", "sms-reader-" + (getViewUser() === "all" ? "all-users" : getViewUser()) + "-");
+    }
     download(name, rows);
     dialog.close();
     showToast("Downloading " + (messages.length && calls.length ? "messages and call logs" : messages.length ? "messages" : "call logs"));

@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#6366f1">
   <title>Dashboard · SMS Reader</title>
-  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="stylesheet" href="../css/styles.css?v=20261028a">
 </head>
 <body class="m-view" data-view="mobile" data-root="../" data-nav="dashboard">
   <div class="m-phone">
@@ -20,6 +20,38 @@
             <p class="subtitle" id="greeting"></p>
           </div>
         </div>
+
+        <section class="panel dialer">
+          <div class="panel-header">
+            <h2>Make a call</h2>
+            <small>Dials on this phone</small>
+          </div>
+          <div class="dialer-body">
+            <div class="dialer-main">
+              <form class="dialer-form" id="dialer-form" novalidate>
+                <div class="search dialer-search">
+                  <input type="search" id="dialer-input" placeholder="Name or number" aria-label="Who to call" inputmode="tel">
+                </div>
+                <select id="dialer-sim" class="dialer-sim" aria-label="Call from SIM"></select>
+                <button type="submit" class="btn dialer-call"><span class="btn-icon" data-icon="call"></span>Call</button>
+              </form>
+              <small class="field-error" id="dialer-error"></small>
+              <p class="dialer-hint">Type a name or number, or use the dial pad. Hold <strong>0</strong> for <strong>+</strong>.</p>
+              <div class="dialer-quick" id="dialer-quick" aria-label="Recent people"></div>
+            </div>
+
+            <div class="dialpad" role="group" aria-label="Dial pad">
+              <div class="dialpad-keys" id="dialpad-keys">
+                <!-- Filled by js/dashboard.js -->
+              </div>
+              <div class="dialpad-actions">
+                <span></span>
+                <button type="button" class="dialpad-call" id="dialpad-call" aria-label="Call"><span data-icon="call"></span></button>
+                <button type="button" class="dialpad-back" id="dialpad-back" aria-label="Delete (hold to clear)" title="Delete (hold to clear)">⌫</button>
+              </div>
+            </div>
+          </div>
+        </section>
         
         <section class="stat-grid" aria-label="Summary">
           <div class="panel stat-tile">
@@ -88,8 +120,8 @@
     <nav class="m-tabbar" id="m-tabbar" aria-label="Main"></nav>
   </div>
 
-  <script src="../js/data.js"></script>
-  <script src="../js/common.js"></script>
-  <script src="../js/dashboard.js"></script>
+  <script src="../js/data.js?v=20261028a"></script>
+  <script src="../js/common.js?v=20261028a"></script>
+  <script src="../js/dashboard.js?v=20261028a"></script>
 </body>
 </html>
