@@ -48,7 +48,9 @@
       .filter((c) => {
         if (!q) return true;
         const contact = getContact(c.contactId);
-        return displayName(contact).toLowerCase().includes(q) || contact.phone.toLowerCase().includes(q);
+        const owner = accountByUsername(c.owner);
+        return displayName(contact).toLowerCase().includes(q) || contact.phone.toLowerCase().includes(q) ||
+          (showOwnerTags() && owner && owner.name.toLowerCase().includes(q));
       });
 
     renderFilters();
@@ -77,6 +79,8 @@
     }
   }
 
+  $("dialpad-btn").addEventListener("click", openDialpad);
   $("search").addEventListener("input", render);
+  attachSuggest($("search"), "calls");
   render();
 })();

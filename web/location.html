@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Signed-out visitors go to the login page before anything is shown -->
+  <script>(function () { var ok = false; try { var u = JSON.parse(localStorage.getItem("smsReader.user") || sessionStorage.getItem("smsReader.user")); ok = !!(u && u.expiresAt && Date.now() < u.expiresAt); } catch (e) {} if (!ok) { document.documentElement.style.visibility = "hidden"; location.replace("login.html"); } })();</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <title>Find my phone · SMS Reader</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="../css/styles.css?v=20261028a">
+</head>
+<body data-view="web" data-root="../" data-nav="location">
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="Main"></nav>
+
+    <div class="page page-dashboard">
+      <main class="card">
+        <header class="page-header">
+          <button class="icon-btn menu-btn" data-menu aria-label="Open menu">&#9776;</button>
+          <div class="header-text">
+            <h1>Find my phone</h1>
+            <p class="subtitle">GPS location, history, ring, lost mode and erase</p>
+          </div>
+        </header>
+
+        <div class="scroll">
+          <div class="loc-wrap">
+            <div class="loc-layout">
+              <section class="loc-map-card">
+                <div class="loc-map-head">
+                  <div><strong id="loc-title"></strong><small id="loc-updated"></small></div>
+                  <button type="button" class="btn btn-sm" id="loc-refresh"><span class="btn-icon" data-icon="pin"></span>Locate now</button>
+                </div>
+                <div class="loc-map" id="loc-map" role="region" aria-label="Map"></div>
+                <div class="loc-map-fallback" id="loc-map-fallback" hidden>
+                  <span data-icon="pin"></span>
+                  <strong>The map needs an internet connection</strong>
+                  <small>Last location: <span id="loc-fallback-coords"></span></small>
+                  <a class="link" id="loc-fallback-link" target="_blank" rel="noopener">Open in OpenStreetMap →</a>
+                </div>
+              </section>
+
+              <div class="loc-side" id="loc-one">
+                <section class="panel loc-status">
+                  <div class="loc-off" id="loc-off" hidden>
+                    <strong>Location sharing is off</strong>
+                    <small>Turn it on so this phone can be found if it's lost.</small>
+                  </div>
+                  <div id="loc-details">
+                    <div class="loc-place">
+                      <span class="loc-pin" data-icon="pin"></span>
+                      <div><strong id="loc-place"></strong><small id="loc-coords"></small></div>
+                    </div>
+                    <dl class="loc-facts">
+                      <div><dt>Last seen</dt><dd id="loc-seen"></dd></div>
+                      <div><dt>Accuracy</dt><dd id="loc-accuracy"></dd></div>
+                      <div><dt>Battery</dt><dd id="loc-battery"></dd></div>
+                      <div><dt>Network</dt><dd id="loc-network"></dd></div>
+                    </dl>
+                    <p class="loc-source"><span id="loc-source"></span> · <a class="link" id="loc-directions" target="_blank" rel="noopener">Directions →</a></p>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="loc-sharing" checked>
+                    <span class="switch-track" aria-hidden="true"></span>
+                    <span>Location sharing <small id="loc-sharing-note"></small></span>
+                  </label>
+                </section>
+
+                <section class="panel">
+                  <h3 class="loc-h3">Find my phone</h3>
+                  <div class="find-actions">
+                    <button type="button" class="find-action" id="act-ring"><span class="find-icon" data-icon="bell"></span><span><strong id="ring-label">Ring</strong><small>Plays a loud sound for 30 s, even on silent</small></span></button>
+                    <button type="button" class="find-action" id="act-lost"><span class="find-icon" data-icon="lock"></span><span><strong>Lost mode</strong><small>Locks the phone and shows your message</small></span></button>
+                    <button type="button" class="find-action danger" id="act-erase"><span class="find-icon" data-icon="trash"></span><span><strong>Erase phone</strong><small>Removes SMS Reader data from the phone</small></span></button>
+                  </div>
+                  <div class="find-status" id="find-status" hidden></div>
+                </section>
+
+                <section class="panel">
+                  <div class="panel-header">
+                    <h2>Location history</h2>
+                    <select class="loc-range" id="loc-range" aria-label="Period">
+                      <option value="day">Last 24 hours</option>
+                      <option value="week">Last 7 days</option>
+                    </select>
+                  </div>
+                  <ol class="loc-history" id="loc-history"></ol>
+                </section>
+              </div>
+
+              <section class="panel loc-side" id="loc-people" hidden>
+                <div class="panel-header"><h2>Phones</h2><small>Tap a person to see their phone</small></div>
+                <ul class="loc-people-list" id="loc-people-list"></ul>
+              </section>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <dialog class="modal" id="lost-modal" aria-labelledby="lost-title">
+    <form class="modal-card" id="lost-form" novalidate>
+      <h2 id="lost-title">Turn on lost mode</h2>
+      <p class="modal-sub">The phone locks and shows this on its lock screen. Its location keeps updating.</p>
+      <div class="field" id="field-lost">
+        <label for="lost-message">Message</label>
+        <input id="lost-message" type="text" maxlength="120">
+        <small class="field-error" id="lost-error"></small>
+      </div>
+      <div class="field">
+        <label for="lost-contact">Contact number <span class="optional">(optional)</span></label>
+        <input id="lost-contact" type="tel" placeholder="A number to call you on">
+        <small class="field-error"></small>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="btn">Turn on</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog class="modal modal-sm" id="erase-modal" aria-labelledby="erase-title">
+    <div class="modal-card">
+      <h2 id="erase-title">Erase this phone?</h2>
+      <p class="modal-sub">SMS Reader removes its data and signs out on the phone the next time it's online. You can't undo this. Type <strong>ERASE</strong> to confirm.</p>
+      <div class="field">
+        <label for="erase-confirm">Type ERASE</label>
+        <input id="erase-confirm" type="text" autocomplete="off" autocapitalize="characters">
+        <small class="field-error"></small>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+        <button type="button" class="btn btn-danger" id="erase-btn" disabled>Erase</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="../js/data.js?v=20261028a"></script>
+  <script src="../js/common.js?v=20261028a"></script>
+  <script src="../js/location.js?v=20261028a"></script>
+</body>
+</html>

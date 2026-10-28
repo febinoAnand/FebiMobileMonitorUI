@@ -331,6 +331,7 @@
 
   document.querySelectorAll("[data-icon]").forEach((el) => { el.innerHTML = ICONS[el.dataset.icon]; });
   $("add-user-btn").addEventListener("click", () => openUserModal(null));
+  attachSuggest($("search"), "users");
   $("search").addEventListener("input", (e) => {
     query = e.target.value.trim();
     renderRows();
