@@ -3680,6 +3680,11 @@ button.sim-add { text-align: left; color: var(--accent); font-weight: 700; font-
 .scope-banner small::before { content: "· "; }
 .m-view .scope-banner small::before { content: none; }
 .m-view .scope-banner > span { flex-direction: column; align-items: flex-start; gap: 2px; }
+/* Narrow web screens: title and note on their own lines, like the mobile view */
+@media (max-width: 700px) {
+  .scope-banner small::before { content: none; }
+  .scope-banner > span:has(> strong) { flex-direction: column; align-items: flex-start; gap: 2px; }
+}
 
 /* =====================================================================
    Find my phone
@@ -4140,3 +4145,14 @@ button.sim-add { text-align: left; color: var(--accent); font-weight: 700; font-
 .dp-error:empty { display: none; }
 .m-view .dialpad-modal .modal-card { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
 @media (prefers-color-scheme: dark) { .dp-match { color: #34d399; } }
+
+/* Short laptop screens (e.g. 1366×768): tighter sidebar so the user row at the bottom stays in view,
+   even with the admin's extra View switch */
+@media (max-height: 820px) and (min-width: 1101px) {
+  .sidebar { padding-top: 16px; }
+  .sidebar .brand { padding-bottom: 14px; }
+  .sidebar .number-switch { margin-bottom: 6px; padding: 7px 10px; }
+  .sidebar .nav-link { padding: 9px 14px; }
+  .sidebar .nav-section { padding: 6px 14px 4px; }
+  .sidebar-footer { padding-top: 10px; }
+}
