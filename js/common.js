@@ -672,6 +672,8 @@ function validatePhone(code, digits) {
 }
 
 // ---------- Page guards ----------
+// Pages only in the web view (Find my phone locates the phone from a computer)
+const NAV_WEB_ONLY = ["location"];
 // Opening a web/ or mobile/ page makes that the remembered view.
 // App pages (data-nav) need a signed-in user. Once signed in, everything is open straight away.
 
@@ -679,10 +681,9 @@ if (document.body.dataset.view) setView(document.body.dataset.view);
 
 if (document.body.dataset.nav && !getUser()) {
   location.replace(loginUrl());
-} else if (document.body.dataset.nav && document.body.dataset.view === "mobile" && isAdmin()) {
-  // Admins manage everyone from the web view; the mobile view is for people's own phones
-  setView("web");
-  location.replace(ROOT + "web/" + location.pathname.split("/").pop() + location.search);
+} else if (document.body.dataset.view === "mobile" && NAV_WEB_ONLY.includes(document.body.dataset.nav)) {
+  // Pages that only exist in the web view
+  location.replace("dashboard.html");
 }
 
 if (document.body.dataset.nav) {
@@ -877,7 +878,7 @@ const NAV_SECTIONS = [
     title: "Manage",
     items: [
       { nav: "devices", href: "devices.html", label: "My phone", icon: "phone" },
-      { nav: "location", href: "location.html", label: "Find my phone", icon: "pin" },
+      { nav: "location", href: "location.html", label: "Find my phone", icon: "pin", webOnly: true },
       { nav: "profile", href: "profile.html", label: "Profile", icon: "profile" },
       { nav: "users", href: "users.html", label: "Users", icon: "users", adminOnly: true }
     ]
@@ -893,6 +894,7 @@ function navBadgeCount(nav) {
 // The same page in the other view, e.g. web/calls.html <-> mobile/calls.html
 function otherViewUrl() {
   const other = getView() === "mobile" ? "web" : "mobile";
+  if (other === "mobile" && NAV_WEB_ONLY.includes(document.body.dataset.nav)) return ROOT + "mobile/dashboard.html";
   return ROOT + other + "/" + location.pathname.split("/").pop() + location.search;
 }
 
@@ -1029,7 +1031,7 @@ function renderSidebar() {
     '<div class="sidebar-footer">' +
       '<div class="avatar" id="user-avatar"></div>' +
       '<div class="user-info"><span class="user-name" id="user-name"></span><span class="user-email" id="user-email"></span></div>' +
-      (isAdmin() ? "" : '<a class="icon-btn view-btn" id="switch-view" href="#" title="Mobile view" aria-label="Switch to mobile view">' + ICONS.phone + "</a>") +
+      ('<a class="icon-btn view-btn" id="switch-view" href="#" title="Mobile view" aria-label="Switch to mobile view">' + ICONS.phone + "</a>") +
       '<button class="icon-btn logout-btn" id="logout-btn" title="Log out" aria-label="Log out">' + ICONS.logout + "</button>" +
     "</div>";
 
@@ -1075,7 +1077,9 @@ function renderMobileShell() {
     topbar.innerHTML =
       '<a class="m-brand" href="dashboard.html" aria-label="Home"><span class="brand-logo">' + ICONS.logo + "</span></a>" +
       '<label class="m-number"><span class="m-number-dot"></span><span class="m-number-text"><small id="ns-caption"></small><select id="number-select" aria-label="Number to view"></select></span></label>' +
-      '<button type="button" class="m-avatar" data-more aria-label="Open menu"><span class="avatar" id="user-avatar"></span></button>';
+      '<button type="button" class="m-avatar" data-more aria-label="Open menu"><span class="avatar" id="user-avatar"></span></button>' +
+      // Admins: whose data to show — My phone, All users or one user (same as the web sidebar)
+      (isAdmin() ? '<label class="m-number m-viewuser"><span class="m-viewuser-ic">' + ICONS.users + '</span><span class="m-number-text"><small>Viewing</small><select id="view-user-select" aria-label="Whose data to view"></select></span></label>' : "");
     setAvatar($("user-avatar"), { id: handle || "guest", name });
     $("ns-caption").textContent = selectedNumberCaption();
     buildNumberSelect($("number-select"));
@@ -1104,10 +1108,9 @@ function renderMobileShell() {
       '<div class="m-sheet-grip"></div>' +
       '<div class="m-sheet-user"><span class="avatar" id="sheet-avatar"></span><span><strong id="sheet-name"></strong><small id="sheet-handle"></small></span>' +
         '<button type="button" class="icon-btn" data-close-sheet aria-label="Close menu">' + ICONS.close + "</button></div>" +
-      (isAdmin() ? '<p class="m-sheet-title">View</p><label class="m-sheet-view">' + ICONS.users + '<select id="view-user-select" aria-label="Whose data to view"></select></label>' : "") +
       NAV_SECTIONS.map((section) =>
         '<p class="m-sheet-title">' + section.title + "</p>" +
-        section.items.filter((item) => !item.adminOnly || isAdmin()).map((item) =>
+        section.items.filter((item) => (!item.adminOnly || isAdmin()) && !item.webOnly).map((item) =>
           '<a class="m-sheet-link' + (item.nav === current ? " active" : "") + '" href="' + item.href + '">' + ICONS[item.icon] + "<span>" + item.label + "</span>" + ICONS.chevron + "</a>"
         ).join("")
       ).join("") +
