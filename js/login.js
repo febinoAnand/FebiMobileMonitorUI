@@ -75,15 +75,6 @@
           setError("field-password", password, "password-error", "This account has been deactivated. Please contact your admin.");
           return;
         }
-        // Admins manage everyone from the web view only
-        if (account.role === "Admin" && getView() === "mobile") {
-          btn.disabled = false;
-          btn.textContent = "Sign in";
-          setError("field-password", password, "password-error", "");
-          $("field-password").classList.add("invalid");
-          $("password-error").innerHTML = 'Admin accounts can\'t use the mobile view. <a class="link" href="../index.html">Use the web view</a>';
-          return;
-        }
         updateAccount(account.id, { lastLogin: new Date().toISOString() });
         saveUser({ name: account.name, username: account.username, email: account.email, country: account.country, number: account.number }, $("remember").checked);
         location.href = nextPage();
